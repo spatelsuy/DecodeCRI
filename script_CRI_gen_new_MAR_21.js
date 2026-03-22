@@ -157,7 +157,7 @@ function goToPreviousCri(){
 
 function callLLMDecodeClassify(yamlContent){
     const userName = "SunilPK";
-    const apiUrl = "http://localhost:8000/cri_ds_decodeClassify";	
+    const apiUrl = "https://decode-cri.vercel.app/cri_ds_decodeClassify";	
     // RETURN the fetch promise
     return fetch(apiUrl, {
         method: "POST",
