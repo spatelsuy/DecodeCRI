@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRI Maturity Assessment | Modern Security Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<link rel="stylesheet" href="maturity-style.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+</head>
+<body>
+    <!-- Modern Header -->
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                CRI Control Intelligence Suite
+            </div>
+            <nav class="nav-links">
+                <a href="#" class="active">Assessment</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#resources">Resources</a>
+                <a href="#login"><i class="fas fa-user"></i> Login</a>
+            </nav>
+            <button class="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <section class="cri-hero">
+        <div class="cri-hero-inner">
+            <h1 class="cri-title"><span>CRI Control</span> Intelligence Suite</h1>
+            <p class="cri-tagline">The Suite operates as a sequential three-stage pipeline.</p>
+
+            <div class="cri-pipeline">
+                <div class="cri-stage">
+                    <div class="cri-stage-num">Stage 01</div>
+                    <div class="cri-stage-name">Decode</div>
+                    <div class="cri-stage-sub">Interpret &amp; Analyze<br>control intent</div>
+                </div>
+                <div class="cri-arrow">→</div>
+                <div class="cri-stage">
+                    <div class="cri-stage-num">Stage 02</div>
+                    <div class="cri-stage-name">Classify</div>
+                    <div class="cri-stage-sub">Structure across six<br>regulatory dimensions</div>
+                </div>
+                <div class="cri-arrow">→</div>
+                <div class="cri-stage">
+                    <div class="cri-stage-num">Stage 03</div>
+                    <div class="cri-stage-name">Validate</div>
+                    <div class="cri-stage-sub">Rule-validate &amp;<br>refine classification</div>
+                </div>
+            </div>
+
+            <div class="cri-body">
+                <p>
+                    Ensuring every CRI Diagnostic Statement is not just understood, but
+                    <strong>correctly labeled</strong>, <strong>rule-validated</strong>, and
+                    <strong>defensibly justified</strong>.
+                </p>
+                <p>
+                    Every classification decision traces back to an explicit rule, not human opinion - 
+                    making it <em>challengeable</em>, <em>explainable</em>, and <em>defensible</em>.
+                </p>
+                <div class="cri-punch">
+                    One Pipeline. <span>Complete Regulatory Confidence.</span>
+                </div>
+                <div class="cri-tags">
+                    <div class="cri-tag">Governance Intent</div>
+                    <div class="cri-tag">Technical Enforcement</div>
+                    <div class="cri-tag">Monitoring</div>
+                    <div class="cri-tag">Automation</div>
+                    <div class="cri-tag">Lifecycle</div>
+                    <div class="cri-tag">Strategic Intent</div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Welcome Section -->
+    <section style="background: linear-gradient(135deg, #f5fdff 0%, #f0f9ff 100%); width: 80%; margin: 0 auto;">
+
+		<div class="container" style="margin-top: var(--space-md); margin-bottom: var(--space-md);">
+	
+		<div id="questions-container">
+        <!-- =========================================== -->
+        <!-- DYNAMIC QUESTIONS WILL BE INSERTED HERE GEN -->
+        <!-- =========================================== -->
+		</div>
+		<div id="cri-final-content">
+        <!-- =========================================== -->
+        <!-- DYNAMIC QUESTIONS WILL BE INSERTED HERE GEN -->
+        <!-- =========================================== -->
+		</div>	
+		</div>
+	</section>
+
+    <!-- Main Content Container -->
+
+    <!-- Footer -->
+    <footer style="background: var(--primary-navy); color: white; padding: var(--space-sm) 0 var(--space-md); margin-top: var(--space-xl);">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-sm); margin-bottom: var(--space-sm);">
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-sm); color: white;">
+                        <i class="fas fa-shield-alt"></i> CRI Control Intelligence Suite
+                    </div>
+                    <p style="color: rgba(255, 255, 255, 0.8);font-size: 1rem; "></p>
+                </div>          
+            </div>
+            
+        </div>
+    </footer>
+
+    <!-- JavaScript (Preserved with enhancements) -->
+    <script type="module" src="script_CRI_gen_new_MAR_21.js"></script>
+	<script>
+	function calculate(){
+		const userName = "SunilPK";
+		const calculationQuestion = "calculate_assessment_result";
+		const apiUrl = "http://localhost:8000/calculate_result";
+
+		// IMPORTANT: return the fetch promise
+		return fetch(apiUrl, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				user_name: userName,
+				domain_result: calculationQuestion
+			})
+		})
+		.then(async response => {
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			//const rawText = await response.text();
+			const data = await response.json();
+			showAssessmentModal(data);
+			//return rawText;   // This resolves the promise
+		})
+		.catch(err => {
+			console.error("Connection Error:", err);
+			return "Error: " + err.message; // This also resolves the promise
+		});
+		
+	}
+
+	function showAssessmentModal(data) {
+	  document.getElementById("modalDomain").textContent = data.domain;
+	  document.getElementById("modalLevel").textContent = data.adjusted_level;
+	  document.getElementById("modalScore").textContent = data.final_maturity_score;
+	  document.getElementById("modalConfidence").textContent = data.confidence_level;
+	  document.getElementById("modalCeiling").textContent = data.governance.domain_cap;
+
+	  document.getElementById("modalSummary").textContent = data.executive_summary;
+
+	  const questionsBody = document.getElementById("modalQuestions");
+	  questionsBody.innerHTML = "";
+
+	  data.per_question_breakdown.forEach(q => {
+		const row = document.createElement("tr");
+
+		row.innerHTML = `
+		  <td>${q.question_id}</td>
+		  <td>${q.score}</td>
+		  <td>${q.weight}</td>
+		  <td>${q.confidence}</td>
+		`;
+
+		questionsBody.appendChild(row);
+	  });
+
+	  const gapsList = document.getElementById("modalGaps");
+	  gapsList.innerHTML = "";
+
+	  data.governance.material_gaps.forEach(gap => {
+		const li = document.createElement("li");
+		li.textContent = gap;
+		gapsList.appendChild(li);
+	  });
+
+	  document.getElementById("assessmentModal").style.display = "flex";
+	}
+
+	function closeAssessmentModal() {
+	  document.getElementById("assessmentModal").style.display = "none";
+	}	
+	
+	</script>
+</body>
+</html>
