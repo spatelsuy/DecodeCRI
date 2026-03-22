@@ -549,7 +549,7 @@ def assess(request: AgentRequestResult):
         print("@@@@@ UNABLE TO CALCULATE FINAL RESULT")
         raise HTTPException(status_code=500, detail=str(e))        
     
-@app.get("/health")
+@app.get("api/health")
 def health():
     return {
         "status": "healthy",
