@@ -15,6 +15,7 @@ def get_ds_decode(state: CRIState) -> CRIState:
         cri_block = cri_ds_yaml["cri_ds_statement"]
         diagnostic_statement = cri_block["diagnostic_statement"]
         response_guide = cri_block["ResponseGuide"]
+        CRI_DS_INTERPRETATION = os.getenv("CRI_DS_INTERPRETATION")
        
         result = call_groq(
             system_prompt=CRI_DS_INTERPRETATION,
@@ -38,6 +39,7 @@ def get_ds_classify(state: CRIState) -> CRIState:
         cri_block = cri_ds_yaml["cri_ds_statement"]
         diagnostic_statement = cri_block["diagnostic_statement"]
         response_guide = cri_block["ResponseGuide"]
+        CRI_DS_CLASSIFY = os.getenv("CRI_DS_CLASSIFY")
         
         result = call_groq(
             system_prompt=CRI_DS_CLASSIFY,
@@ -65,6 +67,7 @@ def get_ds_validate_classify(state: CRIState) -> CRIState:
         response_guide = cri_block["ResponseGuide"]
         classification = state.ds_classification2
         print("\ninterim classification = \n", classification)
+        CRI_DS_VALIDATE = os.getenv("CRI_DS_VALIDATE")
         result = call_groq(
             system_prompt=CRI_DS_VALIDATE,
             user_payload={  "diagonesic_statement": diagnostic_statement, 
