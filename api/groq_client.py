@@ -7,14 +7,13 @@ from typing import Dict, Any
 load_dotenv()
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
-
-if not GROQ_API_KEY:
-    raise RuntimeError("PROMPT_GROQ_KEY not found in environment variables")
-
 
 #model="mixtral-8x7b-32768"
 def call_groq(system_prompt: str, user_payload: Dict[str, Any], model="llama-3.1-8b-instant"):
+    GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
+    if not GROQ_API_KEY:
+        raise RuntimeError("PROMPT_GROQ_KEY not found in environment variables")
+    
     user_prompt = yaml.dump(user_payload, sort_keys=False)
     print("\nMODEL === ", model)
     payload = {
