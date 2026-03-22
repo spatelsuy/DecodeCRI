@@ -50,7 +50,7 @@ let popup = null;
 const criAIResponse = {};
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, fetching questions...');
+    console.log('DOM loaded, fetching data...');
 
 	//readExcelFile("CRI_Profile_Final_2025_04_15_Final.xlsx");
 	fetch('CRI_Profile_Final_2025_04_15_Final.xlsx')
@@ -75,28 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
 		.catch(error => {
 			console.error('Error loading Excel:', error);
 		});	
-	
-	
-    // Load questions from JSON file
-    fetch('questions_gen.json')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Questions loaded successfully:', data);
-            //generateGeneralQuestionsHTML(data.domains);
-			//initializeGenResultButton();
-            //Initialize navigation after questions are generated
-            //initializeNavigation();
-        })
-        .catch(error => {
-            console.error('Error loading questions:', error);
-            document.getElementById('output').innerHTML = 
-                '<p style="color: red;">Error loading questions. Please check if questions.json exists and is valid JSON.</p>';
-        });
 });
 
 function goToNextCri(){
@@ -204,7 +182,6 @@ function callLLMForDSClassification(yamlContent){
         console.error("DS Classification Error:", err);
         return "Error: " + err.message;  // Still return something
     });	
-	
 }
 
 function callLLMForDSEvidence(yamlContent){
@@ -283,11 +260,9 @@ function callLLMForDSRegulatorAlignment(yamlContent){
 }
 
 function getRegulatorCoverage(){
-
 	const dsContainer = document.getElementById("ds-statement-container");
 	const block = document.querySelector('.cri-statement-block');
-	
-	
+
 	//let smeNarrativeID = `smeNarrative-${block.dataset.profileId}`;
 	const data = {
 		profileId: block.dataset.profileId,
@@ -301,16 +276,6 @@ function getRegulatorCoverage(){
 		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
 		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
 		finText: block.querySelector('.cri-financial').textContent.trim()
-		//standardMapped: document.querySelector('input[name="mappingPS"]:checked')?.value, 
-		//measurableControl: document.querySelector('input[name="enforcement"]:checked')?.value,
-		//evidence: document.querySelector('input[name="evidence"]:checked')?.value,
-		//sectorText: document.querySelector('input[name="industry"]:checked')?.value,
-		//orgSizeText: document.querySelector('input[name="orgSize"]:checked')?.value,
-		//riskToleranceText: document.querySelector('input[name="riskTolerance"]:checked')?.value,
-		//regulatoryText: document.querySelector('input[name="regulatory"]:checked')?.value,	
-		//geographyText: Array.from(document.querySelectorAll('input[name="geography"]:checked')).map(cb => cb.value).join(', '),
-		//governanceStrengh: document.querySelector('input[name="governanceStrength"]:checked')?.value
-		//smeNarrative: document.getElementById(smeNarrativeID).value
 	};
 	
 	if (criAIResponse?.[block.dataset.profileId]?.reg_alignment) {
@@ -396,16 +361,6 @@ function getCRIInterpret(){
 		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
 		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
 		finText: block.querySelector('.cri-financial').textContent.trim()
-		//standardMapped: document.querySelector('input[name="mappingPS"]:checked')?.value, 
-		//measurableControl: document.querySelector('input[name="enforcement"]:checked')?.value,
-		//evidence: document.querySelector('input[name="evidence"]:checked')?.value,
-		//sectorText: document.querySelector('input[name="industry"]:checked')?.value,
-		//orgSizeText: document.querySelector('input[name="orgSize"]:checked')?.value,
-		//riskToleranceText: document.querySelector('input[name="riskTolerance"]:checked')?.value,
-		//geographyText: Array.from(document.querySelectorAll('input[name="geography"]:checked')).map(cb => cb.value).join(', '),
-		//regulatoryText: document.querySelector('input[name="regulatory"]:checked')?.value,		
-		//governanceStrengh: document.querySelector('input[name="governanceStrength"]:checked')?.value,
-		//smeNarrative: document.getElementById(smeNarrativeID).value
 	};
 	
 	if (criAIResponse?.[block.dataset.profileId]?.interpret) {
@@ -575,16 +530,6 @@ function getClassification(){
 		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
 		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
 		finText: block.querySelector('.cri-financial').textContent.trim()
-		//standardMapped: document.querySelector('input[name="mappingPS"]:checked')?.value, 
-		//measurableControl: document.querySelector('input[name="enforcement"]:checked')?.value,
-		//evidence: document.querySelector('input[name="evidence"]:checked')?.value,
-		//sectorText: document.querySelector('input[name="industry"]:checked')?.value,
-		//orgSizeText: document.querySelector('input[name="orgSize"]:checked')?.value,
-		//riskToleranceText: document.querySelector('input[name="riskTolerance"]:checked')?.value,
-		//geographyText: Array.from(document.querySelectorAll('input[name="geography"]:checked')).map(cb => cb.value).join(', '),
-		//regulatoryText: document.querySelector('input[name="regulatory"]:checked')?.value,		
-		//governanceStrengh: document.querySelector('input[name="governanceStrength"]:checked')?.value,
-		//smeNarrative: document.getElementById(smeNarrativeID).value
 	};
 	/*
 	if (criAIResponse?.[block.dataset.profileId]?.classification) {
@@ -680,16 +625,6 @@ function getCriDeliveable(){
 		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
 		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
 		finText: block.querySelector('.cri-financial').textContent.trim()
-		//standardMapped: document.querySelector('input[name="mappingPS"]:checked')?.value, 
-		//measurableControl: document.querySelector('input[name="enforcement"]:checked')?.value,
-		//evidence: document.querySelector('input[name="evidence"]:checked')?.value,
-		//sectorText: document.querySelector('input[name="industry"]:checked')?.value,
-		//orgSizeText: document.querySelector('input[name="orgSize"]:checked')?.value,
-		//riskToleranceText: document.querySelector('input[name="riskTolerance"]:checked')?.value,
-		//geographyText: Array.from(document.querySelectorAll('input[name="geography"]:checked')).map(cb => cb.value).join(', '),
-		//regulatoryText: document.querySelector('input[name="regulatory"]:checked')?.value,		
-		//governanceStrengh: document.querySelector('input[name="governanceStrength"]:checked')?.value,
-		//smeNarrative: document.getElementById(smeNarrativeID).value
 	};
 	
 	if (criAIResponse?.[block.dataset.profileId]?.evidence) {
@@ -875,7 +810,7 @@ function convertResponseToHTML(criResponse, profileID, data) {
             <span class="profile-id">Profile ${profileID}</span>
             <span class="ds-text">${doColor(dsText)}</span>
         </div>
-        <button class="pdf-btn" onclick="savePDF()">⬇ Save as PDF</button>
+        <button class="pdf-btn" onclick="savePDF()">Save as PDF</button>
     </div>
 
     <div class="context-bar">
@@ -1166,51 +1101,51 @@ function initCRI(criJson) {
 	operationSection.appendChild(decodeClassifyValidateButton);
 
 	
-    const classificationButton = document.createElement('button');
-    classificationButton.className = 'nav-button-cri btn-cri-classification';
-    classificationButton.innerHTML = 'CRI Classification';
+    //const classificationButton = document.createElement('button');
+    //classificationButton.className = 'nav-button-cri btn-cri-classification';
+    //classificationButton.innerHTML = 'CRI Classification';
 	// Add click event
-	classificationButton.addEventListener('click', async function () {
-		popup = window.open("", "popupWindow", "width=1500,height=600");
-		popup.document.write("<html><body><p>Calling AI Agent...waiting for response...</p></body></html>");
-		let response = getClassification();
-	});	
-	operationSection.appendChild(classificationButton);
+	//classificationButton.addEventListener('click', async function () {
+	//	popup = window.open("", "popupWindow", "width=1500,height=600");
+	//	popup.document.write("<html><body><p>Calling AI Agent...waiting for response...</p></body></html>");
+	//	let response = getClassification();
+	//});	
+	//operationSection.appendChild(classificationButton);
 
 
-    const criDeliverableButton = document.createElement('button');
-    criDeliverableButton.className = 'nav-button-cri btn-cri-classification';
-    criDeliverableButton.innerHTML = 'Deliverables';
+    //const criDeliverableButton = document.createElement('button');
+    //criDeliverableButton.className = 'nav-button-cri btn-cri-classification';
+    //criDeliverableButton.innerHTML = 'Deliverables';
 	// Add click event
-	criDeliverableButton.addEventListener('click', function () {
-		popup = window.open("", "popupWindow", "width=1500,height=600");
-		popup.document.write("<p>Calling AI Agent...waiting for response...</p>");
-		getCriDeliveable();
-	});	
-	operationSection.appendChild(criDeliverableButton);
+	//criDeliverableButton.addEventListener('click', function () {
+	//	popup = window.open("", "popupWindow", "width=1500,height=600");
+	//	popup.document.write("<p>Calling AI Agent...waiting for response...</p>");
+	//	getCriDeliveable();
+	//});	
+	//operationSection.appendChild(criDeliverableButton);
 
 
-    const criInterpreterButton = document.createElement('button');
-    criInterpreterButton.className = 'nav-button-cri btn-cri-classification';
-    criInterpreterButton.innerHTML = 'DS Interpreter';
+    //const criInterpreterButton = document.createElement('button');
+    //criInterpreterButton.className = 'nav-button-cri btn-cri-classification';
+    //criInterpreterButton.innerHTML = 'DS Interpreter';
 	// Add click event
-	criInterpreterButton.addEventListener('click', function () {
-		popup = window.open("", "popupWindow", "width=1500,height=600");
-		popup.document.write("<p>Calling AI Agent...waiting for response...</p>");		
-		getCRIInterpret();
-	});	
-	operationSection.appendChild(criInterpreterButton);
+	//criInterpreterButton.addEventListener('click', function () {
+	//	popup = window.open("", "popupWindow", "width=1500,height=600");
+	//	popup.document.write("<p>Calling AI Agent...waiting for response...</p>");		
+	//	getCRIInterpret();
+	//});	
+	//operationSection.appendChild(criInterpreterButton);
 
-    const regulatoryAlignmentButton = document.createElement('button');
-    regulatoryAlignmentButton.className = 'nav-button-cri btn-cri-classification';
-    regulatoryAlignmentButton.innerHTML = 'Regulatory Coverage & Gap Detection';
+    //const regulatoryAlignmentButton = document.createElement('button');
+    //regulatoryAlignmentButton.className = 'nav-button-cri btn-cri-classification';
+    //regulatoryAlignmentButton.innerHTML = 'Regulatory Coverage & Gap Detection';
 	// Add click event
-	regulatoryAlignmentButton.addEventListener('click', function () {
-		popup = window.open("", "popupWindow", "width=1500,height=600");
-		popup.document.write("<p>Calling AI Agent...waiting for response...</p>");
-		getRegulatorCoverage();
-	});	
-	operationSection.appendChild(regulatoryAlignmentButton);
+	//regulatoryAlignmentButton.addEventListener('click', function () {
+	//	popup = window.open("", "popupWindow", "width=1500,height=600");
+	//	popup.document.write("<p>Calling AI Agent...waiting for response...</p>");
+	//	getRegulatorCoverage();
+	//});	
+	//operationSection.appendChild(regulatoryAlignmentButton);
 	
 	criContainer.appendChild(operationSection);
     //updateCounter();
@@ -1803,10 +1738,6 @@ async function generateFinalGenResult() {
     sections.kpis_and_evidence.forEach((item, index) => {
         yamlContent += `${index + 1}. ${item}\n`;
     });
-
-
-
-
 
     // 6. Show results in modal (NO AI YET)
     showGeneralQuestionAnswerModal(
