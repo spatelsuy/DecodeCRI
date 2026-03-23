@@ -1,5 +1,6 @@
 import sys
 import os
+from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -55,6 +56,78 @@ app.add_middleware(
 # ----------------------------
 # AGENT GEN ENTRYPOINT
 # ----------------------------
+
+load_dotenv()
+url: str = os.getenv("SUPABASE_URL")
+key: str = os.getenv("SUPABASE_SERVICE_KEY")
+
+# Initialize the Supabase client
+supabase: Client = create_client(url, key)
+
+def read_from_database(ds_id: str, state: CRIState) -> bool:
+    try:
+        print("Reading Data from DB for ", ds_id)
+        table_name = 'CRI_DECODE'
+        response = (
+            supabase.table(table_name)
+            .select("STATE, KEY, VALUE")        # Only select the columns you need
+            .eq("DS_ID", ds_id)    # Your filter from before
+            .eq("STATE", "CRIState")
+            .execute()
+            )
+        # Perform the insert operation
+        #print(response.data)
+        rows = response.data
+        count = len(rows)
+        if count < 3:
+            return False
+
+        for row in rows:
+            if row['KEY'] == "CLASSIFICATION":
+                #print("Value of CLASSIFICATION = ", row['VALUE'])
+                state.ds_classification2 = row['VALUE']
+            elif row['KEY'] == "INTERPRITATION":
+                #print("Value of INTERPRITATION = ", row['VALUE'])
+                state.cri_interpretation1 = row['VALUE']
+            elif row['KEY'] == "VALIDATED_CLASSIFICATION":
+                #print("Value of VALIDATED_CLASSIFICATION = ", row['VALUE'])
+                state.ds_classification_validated = row['VALUE']  
+
+        return True
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False  
+        
+
+def write_to_database(ds_id: str, state: CRIState) -> bool:
+    
+    print("Writing to DB")
+
+    """
+    Inserts data into a Supabase table.
+    """
+    table_name = 'CRI_DECODE' # Replace with your actual table name
+    data_to_insert = [
+        {"DS_ID": ds_id, "STATE": "CRIState", "KEY": "INTERPRITATION", "VALUE": state["cri_interpretation1"]},
+        {"DS_ID": ds_id, "STATE": "CRIState", "KEY": "CLASSIFICATION", "VALUE": state["ds_classification2"]}, 
+        {"DS_ID": ds_id, "STATE": "CRIState", "KEY": "VALIDATED_CLASSIFICATION", "VALUE": state["ds_classification_validated"]}
+    ]
+
+    try:
+        # Perform the insert operation
+        response = supabase.table(table_name).insert(data_to_insert).execute()
+        print("Data inserted successfully:")
+        #print(response.data)
+        return True
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
+
+
+
 
 def eval_trigger(trig: str, gen_state: Dict[str, bool]) -> bool:
     """
@@ -260,16 +333,38 @@ def assess(request: CRIDSGeneral):
 def assess(request: CRIDSGeneral):
     try:
         cri_ds_data = yaml.safe_load(request.cri_ds_statement)
-        print("\nCRI_DS_DATA DECODE=\n", cri_ds_data)
+        #print("\nCRI_DS_DATA DECODE=\n", cri_ds_data)
         if "cri_ds_statement" in cri_ds_data:
             cri_ds = cri_ds_data["cri_ds_statement"]
-            print("\n###cri_ds_statement=###\n", cri_ds)
+            #print("\n###cri_ds_statement=###\n", cri_ds)
         
+        ds_id = cri_ds_data["cri_ds_statement"]["profile_id"]
         state = CRIState(cri_ds_statement = request.cri_ds_statement)
+        
+        result = read_from_database(ds_id, state)
+        if result == True:
+            print("Data already exist in DB")
+            #print("CLASSIFICATION = ", state.ds_classification2)
+            #print("INTERPRITATION = ", state.cri_interpretation1)
+            #print("VALIDATED CLASSIFICATION = ", state.ds_classification_validated)
+            return JSONResponse({
+                "cri_interpretation": state.cri_interpretation1, 
+                "ds_classification": state.ds_classification2,
+                "cri_validated_classification": state.ds_classification_validated
+            })
+        else:
+            print("NEED TO CONNECT LLM")
+        
         result = cri_ds_decodeClassify_runtime.invoke(state)
-        print("\nCRI INTERPRITATION :\n", json.dumps(result["cri_interpretation1"], indent=2))
-        print("\nCRI CLASSIFICATION :\n", json.dumps(result["ds_classification2"], indent=2))
-        print("\nCRI VALIDATED CLASSIFICATION :\n", json.dumps(result["ds_classification_validated"], indent=2))
+        
+        #print("\nCRI INTERPRITATION :\n", json.dumps(result["cri_interpretation1"], indent=2))
+        #print("\nCRI CLASSIFICATION :\n", json.dumps(result["ds_classification2"], indent=2))
+        #print("\nCRI VALIDATED CLASSIFICATION :\n", json.dumps(result["ds_classification_validated"], indent=2))
+        
+        parsed = yaml.safe_load(state.cri_ds_statement)
+        ds_id = parsed["cri_ds_statement"]["profile_id"]
+        
+        write_to_database(ds_id, result)
 
         return JSONResponse({
             "cri_interpretation": result["cri_interpretation1"], 
@@ -280,7 +375,6 @@ def assess(request: CRIDSGeneral):
     except Exception as e:
         print("Error in getting CRI DS Decode & Classify\n", str(e))
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 @app.post("/cri_ds_category")
