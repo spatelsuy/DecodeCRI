@@ -97,7 +97,7 @@ def read_from_database(ds_id: str, state: CRIState) -> bool:
         return True
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred while reading from database: {e}")
         return False  
         
 
@@ -123,7 +123,7 @@ def write_to_database(ds_id: str, state: CRIState) -> bool:
         return True
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred while writing to database: {e}")
         return False
 
 
