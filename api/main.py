@@ -1,5 +1,6 @@
 import sys
 import os
+from supabase import create_client, Client
 from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(__file__))
