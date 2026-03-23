@@ -273,9 +273,7 @@ function getRegulatorCoverage(){
 		functionText: block.querySelector('.cri-outline-id').textContent.trim(),
 		categoryText: block.querySelector('.cri-category').textContent.trim(),
 		diagnosticText: block.querySelector('.cri-diagnostic').textContent.trim(),
-		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
-		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
-		finText: block.querySelector('.cri-financial').textContent.trim()
+		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim()
 	};
 	
 	if (criAIResponse?.[block.dataset.profileId]?.reg_alignment) {
@@ -314,18 +312,8 @@ function getRegulatorCoverage(){
 		.map(line => `    ${line}`)
 		.join('\n');	
 	yamlContent += rgText + "\n";
-
-	yamlContent += `  EEE: |\n`;
-	const evText = data.eeeText
-		.split('\n')
-		.map(line => `    ${line}`)
-		.join('\n');	
-	yamlContent += evText + "\n";
-
-	yamlContent += "  FIN: " + `${data.finText}\n`;
-
 	
-	alert(yamlContent); //Calling AI Agent
+	//alert(yamlContent); //Calling AI Agent
 	callLLMForDSRegulatorAlignment(yamlContent)
     .then(resp_data => {
 		let profileID = `${data.profileId}`;
@@ -358,9 +346,7 @@ function getCRIInterpret(){
 		functionText: block.querySelector('.cri-outline-id').textContent.trim(),
 		categoryText: block.querySelector('.cri-category').textContent.trim(),
 		diagnosticText: block.querySelector('.cri-diagnostic').textContent.trim(),
-		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
-		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
-		finText: block.querySelector('.cri-financial').textContent.trim()
+		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim()
 	};
 	
 	if (criAIResponse?.[block.dataset.profileId]?.interpret) {
@@ -399,15 +385,6 @@ function getCRIInterpret(){
 		.map(line => `    ${line}`)
 		.join('\n');	
 	yamlContent += rgText + "\n";
-
-	yamlContent += `  EEE: |\n`;
-	const evText = data.eeeText
-		.split('\n')
-		.map(line => `    ${line}`)
-		.join('\n');	
-	yamlContent += evText + "\n";
-
-	yamlContent += "  FIN: " + `${data.finText}\n`;
 	
 	//alert(yamlContent); //Calling AI Agent
 	callLLMForDSInterpretation(yamlContent)
@@ -442,9 +419,7 @@ function getDecodeAndClassify(){
 		functionText: block.querySelector('.cri-outline-id').textContent.trim(),
 		categoryText: block.querySelector('.cri-category').textContent.trim(),
 		diagnosticText: block.querySelector('.cri-diagnostic').textContent.trim(),
-		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
-		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
-		finText: block.querySelector('.cri-financial').textContent.trim()
+		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim()
 	};
 	/*
 	if (criAIResponse?.[block.dataset.profileId]?.classification) {
@@ -482,15 +457,6 @@ function getDecodeAndClassify(){
 		.map(line => `    ${line}`)
 		.join('\n');	
 	yamlContent += rgText + "\n";
-
-	yamlContent += `  EEE: |\n`;
-	const evText = data.eeeText
-		.split('\n')
-		.map(line => `    ${line}`)
-		.join('\n');	
-	yamlContent += evText + "\n";
-
-	yamlContent += "  FIN: " + `${data.finText}\n`;
 
 	alert(yamlContent); //Calling AI Agent
 	callLLMDecodeClassify(yamlContent)
@@ -527,9 +493,7 @@ function getClassification(){
 		functionText: block.querySelector('.cri-outline-id').textContent.trim(),
 		categoryText: block.querySelector('.cri-category').textContent.trim(),
 		diagnosticText: block.querySelector('.cri-diagnostic').textContent.trim(),
-		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
-		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
-		finText: block.querySelector('.cri-financial').textContent.trim()
+		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim()
 	};
 	/*
 	if (criAIResponse?.[block.dataset.profileId]?.classification) {
@@ -567,18 +531,8 @@ function getClassification(){
 		.map(line => `    ${line}`)
 		.join('\n');	
 	yamlContent += rgText + "\n";
-
-	yamlContent += `  EEE: |\n`;
-	const evText = data.eeeText
-		.split('\n')
-		.map(line => `    ${line}`)
-		.join('\n');	
-	yamlContent += evText + "\n";
-
-	yamlContent += "  FIN: " + `${data.finText}\n`;
-
 	
-	alert(yamlContent); //Calling AI Agent
+	//alert(yamlContent); //Calling AI Agent
 	callLLMForDSClassification(yamlContent)
     .then(resp_data => {
 		let profileID = `${data.profileId}`;
@@ -622,9 +576,7 @@ function getCriDeliveable(){
 		functionText: block.querySelector('.cri-outline-id').textContent.trim(),
 		categoryText: block.querySelector('.cri-category').textContent.trim(),
 		diagnosticText: block.querySelector('.cri-diagnostic').textContent.trim(),
-		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim(),
-		eeeText: block.querySelector('.cri-eee-guide').textContent.trim(),
-		finText: block.querySelector('.cri-financial').textContent.trim()
+		responseGuideText: block.querySelector('.cri-response-guide').textContent.trim()
 	};
 	
 	if (criAIResponse?.[block.dataset.profileId]?.evidence) {
@@ -663,13 +615,6 @@ function getCriDeliveable(){
 		.map(line => `    ${line}`)
 		.join('\n');	
 	yamlContent += rgText + "\n";
-
-	yamlContent += `  EEE: |\n`;
-	const evText = data.eeeText
-		.split('\n')
-		.map(line => `    ${line}`)
-		.join('\n');	
-	yamlContent += evText + "\n";
 	
 	//alert(yamlContent); //Calling AI Agent
 	callLLMForDSEvidence(yamlContent)
