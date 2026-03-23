@@ -99,20 +99,97 @@
 
     <!-- Main Content Container -->
 
-    <!-- Footer -->
-    <footer style="background: var(--primary-navy); color: white; padding: var(--space-sm) 0 var(--space-md); margin-top: var(--space-xl);">
-        <div class="container">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-sm); margin-bottom: var(--space-sm);">
-                <div>
-                    <div style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-sm); color: white;">
-                        <i class="fas fa-shield-alt"></i> CRI Control Intelligence Suite
+
+    <section style="background: var(--primary-navy); color: white; padding: var(--space-sm) 0 var(--space-md); margin-top: var(--space-xl);" id="definitions">
+        <div class="def-inner">
+
+            <div class="def-eyebrow">Classification Framework</div>
+            <h2 class="def-heading">Six Dimensions of <span>Control Intelligence</span></h2>
+            <p class="def-lead">Every CRI Diagnostic Statement is evaluated across six operational dimensions.<br>Each dimension answers a distinct question about how a control works, enforces, and evidences.</p>
+
+            <div class="def-grid">
+
+                <!-- Governance Intent -->
+                <div class="def-card gov">
+                    <div class="def-card-top">
+                        <span class="def-card-num">01</span>
+                        <span class="def-card-layer">Steering Layer</span>
                     </div>
-                    <p style="color: rgba(255, 255, 255, 0.8);font-size: 1rem; "></p>
-                </div>          
+                    <i class="fas fa-landmark def-card-icon"><text class="def-card-name">Governance Intent</text></i>
+                    <div class="def-card-desc">
+                        Defines whether a control establishes <strong>policy, accountability, or organizational direction</strong>. Controls with governance intent require formal decision-making, documented standards, and management oversight to be considered effectively implemented.
+                    </div>
+                </div>
+
+                <!-- Technical Enforcement -->
+                <div class="def-card tech">
+                    <div class="def-card-top">
+                        <span class="def-card-num">02</span>
+                        <span class="def-card-layer">Shield Layer</span>
+                    </div>
+                    <i class="fas fa-shield-alt def-card-icon"><text class="def-card-name">Technical Enforcement</text></i>
+                    
+                    <div class="def-card-desc">
+                        Identifies controls enforced through <strong>systems, configurations, or technical mechanisms</strong> — blocking, restricting, or preventing behavior without relying on human action at the point of execution.
+                    </div>
+                </div>
+
+                <!-- Monitoring -->
+                <div class="def-card mon">
+                    <div class="def-card-top">
+                        <span class="def-card-num">03</span>
+                        <span class="def-card-layer">Eyes Layer</span>
+                    </div>
+                    <i class="fas fa-eye def-card-icon"><text class="def-card-name">Monitoring</text></i>
+                    
+                    <div class="def-card-desc">
+                        Captures controls that <strong>observe, detect, log, or evaluate</strong> system state and behavior — generating the visibility and audit evidence that examiners and regulators require to verify control effectiveness.
+                    </div>
+                </div>
+
+                <!-- Automation -->
+                <div class="def-card auto">
+                    <div class="def-card-top">
+                        <span class="def-card-num">04</span>
+                        <span class="def-card-layer">Speed Layer</span>
+                    </div>
+                    <i class="fas fa-bolt def-card-icon"><text class="def-card-name">Automation</text></i>
+                    
+                    <div class="def-card-desc">
+                        Flags controls where execution is <strong>performed automatically by systems</strong> — no manual intervention required. Trigger-based, programmatic, and repeatable at scale. Where Automation is present, Technical Enforcement must also exist.
+                    </div>
+                </div>
+
+                <!-- Lifecycle -->
+                <div class="def-card life">
+                    <div class="def-card-top">
+                        <span class="def-card-num">05</span>
+                        <span class="def-card-layer">Flow Layer</span>
+                    </div>
+                    <i class="fas fa-sync-alt def-card-icon"><text class="def-card-name">Lifecycle</text></i>
+                    
+                    <div class="def-card-desc">
+                        Recognizes controls that are <strong>not one-time actions but ongoing operational processes</strong> — provisioning, maintenance, periodic reviews, and continuous management over time. Lifecycle controls demand sustained operational commitment.
+                    </div>
+                </div>
+
+                <!-- Strategic Intent -->
+                <div class="def-card strat">
+                    <div class="def-card-top">
+                        <span class="def-card-num">06</span>
+                        <span class="def-card-layer">Direction Layer</span>
+                    </div>
+                    <i class="fas fa-compass def-card-icon"><text class="def-card-name">Strategic Intent</text></i>
+                    
+                    <div class="def-card-desc">
+                        Reserved for controls that establish <strong>high-level direction or existence statements</strong> — where no specific governance, technical, monitoring, automation, or lifecycle mechanics are present. A signal of intent without operational execution.
+                    </div>
+                </div>
+
             </div>
-            
         </div>
-    </footer>
+    </section>
+
     <!-- JavaScript (Preserved with enhancements) -->
     <script type="module" src="script_CRI_gen_new_MAR_21.js"></script>
 </body>
