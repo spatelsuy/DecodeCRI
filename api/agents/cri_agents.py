@@ -26,7 +26,7 @@ def get_ds_decode(state: CRIState) -> CRIState:
         ) 
         print("Received Interpritation Result")
         state.cri_interpretation1 = result
-        print(state.cri_interpretation1)
+        #print(state.cri_interpretation1)
         return state
         
     except Exception as e:
@@ -51,7 +51,7 @@ def get_ds_classify(state: CRIState) -> CRIState:
             model="openai/gpt-oss-120b"
         )
         state.ds_classification2 = result
-        print(state.ds_classification2)
+        #print(state.ds_classification2)
         return state
         
     except Exception as e:
@@ -67,7 +67,7 @@ def get_ds_validate_classify(state: CRIState) -> CRIState:
         diagnostic_statement = cri_block["diagnostic_statement"]
         response_guide = cri_block["ResponseGuide"]
         classification = state.ds_classification2
-        print("\ninterim classification = \n", classification)
+        #print("\ninterim classification = \n", classification)
         CRI_DS_VALIDATE = os.getenv("CRI_DS_VALIDATE")
         result = call_groq(
             system_prompt=CRI_DS_VALIDATE,
@@ -78,7 +78,7 @@ def get_ds_validate_classify(state: CRIState) -> CRIState:
         ) 
         print("Received Final Classification")
         state.ds_classification_validated = result
-        print(state.ds_classification_validated)        
+        #print(state.ds_classification_validated)        
         return state
 
     except Exception as e:
@@ -88,19 +88,12 @@ def get_ds_validate_classify(state: CRIState) -> CRIState:
 def get_ds_regalignment(state: CRIState) -> CRIState:
     try:
         cri_ds_yaml = yaml.safe_load(state.cri_ds_statement)
-        print("1")
         cri_block = cri_ds_yaml["cri_ds_statement"]
-        print("2")
         diagnostic_statement = cri_block["diagnostic_statement"]
-        print("3")
         response_guide = cri_block["ResponseGuide"]
-        print("4")
         eee = cri_block["EEE"]
-        print("5")
         fin = cri_block["FIN"]
-        print("6")
         targetRegulation = cri_block["Regulations"]
-        print("7")
         result = call_groq(
             system_prompt=CRI_DS_REG_ALIGNMENT,
             user_payload={  "diagonesic_statement": diagnostic_statement, 
