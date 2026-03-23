@@ -458,7 +458,7 @@ function getDecodeAndClassify(){
 		.join('\n');	
 	yamlContent += rgText + "\n";
 
-	alert(yamlContent); //Calling AI Agent
+	//alert(yamlContent); //Calling AI Agent
 	callLLMDecodeClassify(yamlContent)
     .then(resp_data => {
 		let profileID = `${data.profileId}`;
