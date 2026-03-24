@@ -699,19 +699,17 @@ function convertResponseToHTML(criResponse, profileID, data) {
             <td class="just">${justification}</td>
         </tr>`).join('');
 
-    const flagsHTMLOLD = Object.entries(validated.validated_classification)
-        .map(([key, value]) => `
-        <div class="flag-row">
-            <span class="flag-label">${key}</span>
-            ${badge(value)}
-        </div>`).join('');
-		
-    const flagsHTML = Object.entries(validated.validated_classification)
-        .map( ([key, value], i) => `
-		<tr class="${i % 2 === 0 ? '' : 'alt'}">
-		<td class="cat">${key}</td>
-		<td class="val-cell">${badge(value)}</td>
-		</tr>`).join('');
+	const flagsHTML = Object.entries(validated.validated_classification)
+		.map(([key, value], i) => {
+			const match = validated.adjustments.find(a => a.component === key);
+
+			return `
+			<tr class="${i % 2 === 0 ? '' : 'alt'}">
+				<td class="cat">${key}</td>
+				<td class="val-cell">${badge(value)}</td>
+				<td class="reason-cell">${match ? match.reason : ''}</td>
+			</tr>`;
+		}).join('');
 	
     const adjustHTML = validated.adjustments?.length > 0
         ? `<div class="label" style="margin-top:12px">Adjustments</div>
