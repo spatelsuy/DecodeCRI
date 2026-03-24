@@ -733,12 +733,13 @@ function convertResponseToHTML(criResponse, profileID, data) {
         </div>
         <div class="split-divider"></div>
         <div class="split-right">
-            <div class="card-title">🏷️ DS Classification</div>
+            <div class="card-title">🏷️ DS Validated Classification</div>
             <table>
                 <thead>
                     <tr>
                         <th>Category</th>
                         <th style="width:62px;text-align:center">Value</th>
+						<th>Reason</th>
                     </tr>
                 </thead>
                 <tbody>${flagsHTML}</tbody>
