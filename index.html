@@ -1,1 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRI Maturity Assessment | Modern Security Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<link rel="stylesheet" href="maturity-style.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+</head>
+<body>
+    <!-- Modern Header -->
+    <header>
+        <div class="container header-container">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                CRI Control Intelligence Suite
+            </div>
+            <nav class="nav-links">
+                <a href="#" class="active">Assessment</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#resources">Resources</a>
+                <a href="#login"><i class="fas fa-user"></i> Login</a>
+            </nav>
+            <button class="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <section class="cri-hero">
+        <div class="cri-hero-inner">
+            <h1 class="cri-title"><span>CRI Control</span> Intelligence Suite</h1>
+            <text class="cri-tagline">The Suite operates as a sequential three-stage pipeline.</text>
+
+            <div class="cri-pipeline">
+                <div class="cri-stage">
+                    <div class="cri-stage-num">Stage 01</div>
+                    <div class="cri-stage-name">Decode</div>
+                    <div class="cri-stage-sub">Interpret &amp; Analyze<br>control intent</div>
+                </div>
+                <div class="cri-arrow">→</div>
+                <div class="cri-stage">
+                    <div class="cri-stage-num">Stage 02</div>
+                    <div class="cri-stage-name">Classify</div>
+                    <div class="cri-stage-sub">Structure across six<br>regulatory dimensions</div>
+                </div>
+                <div class="cri-arrow">→</div>
+                <div class="cri-stage">
+                    <div class="cri-stage-num">Stage 03</div>
+                    <div class="cri-stage-name">Validate</div>
+                    <div class="cri-stage-sub">Rule-validate &amp;<br>refine classification</div>
+                </div>
+            </div>
+
+            <div class="cri-body">
+                <p>
+                    Ensuring every CRI Diagnostic Statement is not just understood, but
+                    <strong>correctly labeled</strong>, <strong>rule-validated</strong>, and
+                    <strong>defensibly justified</strong>.
+                    Every classification decision traces back to an explicit rule, not human opinion - 
+                    making it <em>challengeable</em>, <em>explainable</em>, and <em>defensible</em>.
+                </p>
+                <div class="cri-punch">
+                    One Pipeline. <span>Complete Regulatory Confidence.</span>
+                </div>
+                <div class="cri-tags">
+                    <div class="cri-tag">Governance Intent</div>
+                    <div class="cri-tag">Technical Enforcement</div>
+                    <div class="cri-tag">Monitoring</div>
+                    <div class="cri-tag">Automation</div>
+                    <div class="cri-tag">Lifecycle</div>
+                    <div class="cri-tag">Strategic Intent</div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Welcome Section -->
+    <div style="background: linear-gradient(135deg, #f5fdff 0%, #f0f9ff 100%); width: 80%; margin: 0 auto;">
+		<div class="container" style="margin-top: var(--space-md); margin-bottom: var(--space-md);">
+		<div id="questions-container">
+        <!-- =========================================== -->
+        <!-- DYNAMIC QUESTIONS WILL BE INSERTED HERE GEN -->
+        <!-- =========================================== -->
+		</div>
+		<div id="cri-final-content">
+        <!-- =========================================== -->
+        <!-- DYNAMIC QUESTIONS WILL BE INSERTED HERE GEN -->
+        <!-- =========================================== -->
+		</div>	
+		</div>
+	</div>
+
+    <!-- Main Content Container -->
+
+
+    <section style="background: var(--primary-navy); color: white; padding: var(--space-sm) 0 var(--space-md); margin-top: var(--space-xl);" id="definitions">
+        <div class="def-inner">
+
+            <div class="def-eyebrow">Classification Framework</div>
+            <h2 class="def-heading">Six Dimensions of <span>Control Intelligence</span></h2>
+            <p class="def-lead">Every CRI Diagnostic Statement is evaluated across six operational dimensions.<br>Each dimension answers a distinct question about how a control works, enforces, and evidences.</p>
+
+            <div class="def-grid">
+
+                <!-- Governance Intent -->
+                <div class="def-card gov">
+                    <div class="def-card-top">
+                        <span class="def-card-num">01</span>
+                        <span class="def-card-layer">Steering Layer</span>
+                    </div>
+                    <i class="fas fa-landmark def-card-icon"><text class="def-card-name">Governance Intent</text></i>
+                    <div class="def-card-desc">
+                        Defines whether a control establishes <strong>policy, accountability, or organizational direction</strong>. Controls with governance intent require formal decision-making, documented standards, and management oversight to be considered effectively implemented.
+                    </div>
+                </div>
+
+                <!-- Technical Enforcement -->
+                <div class="def-card tech">
+                    <div class="def-card-top">
+                        <span class="def-card-num">02</span>
+                        <span class="def-card-layer">Shield Layer</span>
+                    </div>
+                    <i class="fas fa-shield-alt def-card-icon"><text class="def-card-name">Technical Enforcement</text></i>
+                    
+                    <div class="def-card-desc">
+                        Identifies controls enforced through <strong>systems, configurations, or technical mechanisms</strong> — blocking, restricting, or preventing behavior without relying on human action at the point of execution.
+                    </div>
+                </div>
+
+                <!-- Monitoring -->
+                <div class="def-card mon">
+                    <div class="def-card-top">
+                        <span class="def-card-num">03</span>
+                        <span class="def-card-layer">Eyes Layer</span>
+                    </div>
+                    <i class="fas fa-eye def-card-icon"><text class="def-card-name">Monitoring</text></i>
+                    
+                    <div class="def-card-desc">
+                        Captures controls that <strong>observe, detect, log, or evaluate</strong> system state and behavior - generating the visibility and audit evidence that examiners and regulators require to verify control effectiveness.
+                    </div>
+                </div>
+
+                <!-- Automation -->
+                <div class="def-card auto">
+                    <div class="def-card-top">
+                        <span class="def-card-num">04</span>
+                        <span class="def-card-layer">Speed Layer</span>
+                    </div>
+                    <i class="fas fa-bolt def-card-icon"><text class="def-card-name">Automation</text></i>
+                    
+                    <div class="def-card-desc">
+                        Flags controls where execution is <strong>performed automatically by systems</strong> - no manual intervention required. Trigger-based, programmatic, and repeatable at scale. Where Automation is present, Technical Enforcement must also exist.
+                    </div>
+                </div>
+
+                <!-- Lifecycle -->
+                <div class="def-card life">
+                    <div class="def-card-top">
+                        <span class="def-card-num">05</span>
+                        <span class="def-card-layer">Flow Layer</span>
+                    </div>
+                    <i class="fas fa-sync-alt def-card-icon"><text class="def-card-name">Lifecycle</text></i>
+                    
+                    <div class="def-card-desc">
+                        Recognizes controls that are <strong>not one-time actions but ongoing operational processes</strong> - provisioning, maintenance, periodic reviews, and continuous management over time. Lifecycle controls demand sustained operational commitment.
+                    </div>
+                </div>
+
+                <!-- Strategic Intent -->
+                <div class="def-card strat">
+                    <div class="def-card-top">
+                        <span class="def-card-num">06</span>
+                        <span class="def-card-layer">Direction Layer</span>
+                    </div>
+                    <i class="fas fa-compass def-card-icon"><text class="def-card-name">Strategic Intent</text></i>
+                    
+                    <div class="def-card-desc">
+                        Reserved for controls that establish <strong>high-level direction or existence statements</strong> - where no specific governance, technical, monitoring, automation, or lifecycle mechanics are present. A signal of intent without operational execution.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- JavaScript (Preserved with enhancements) -->
+    <script type="module" src="script_CRI_gen_new_MAR_21.js"></script>
+</body>
+</html>
