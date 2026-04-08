@@ -466,99 +466,105 @@ def validate_input_agent(state: CRIState) -> CRIState:
 def guard_hard_rule_reversals(state: CRIState ) -> CRIState:
     prompt3_output = state.ds_classification_validated
     code_adjustments = state.validated_classification_input["classification"]["code_adjustments"]
-
+    understanding = state.cri_interpretation
+    prompt2_output = state.validated_classification_input["classification"]["prompt2_output"]
+    
     """
-    Safety net after Prompt 3 runs.
-    
-    Ensures Prompt 3 has not reversed any hard rule
-    corrections made by Code Layer B (apply_hard_rules).
-    
-    If Prompt 3 reversed a hard rule correction:
-    - Restores the correct value
-    - Removes the bad Prompt 3 adjustment
-    - Documents the restoration
-    
-    If code_adjustments is empty — nothing to guard,
-    returns prompt3_output unchanged.
-    
-    Args:
-        prompt3_output:   Raw output dict from Prompt 3
-        code_adjustments: List of adjustments from 
-                          apply_hard_rules()
-    
-    Returns:
-        Final verified output dict
-        
-        
-    return {
-        "classification": {
-            # What Prompt 2 classified with justifications
-            "prompt2_output": prompt2_output["Classification"],
-
-            # What the classification looks like after
-            # hard rules applied by code
-            "validated_classification": validated,
-
-            # What hard rules changed — Prompt 3 must not
-            # re-apply these
-            "code_adjustments": adjustments
-        }        
+    Extended guard — checks both:
+    1. Values corrected by Code B (existing behaviour)
+    2. Values that hard rules require regardless of 
+       whether Code B fired
     """
+    validated = dict(prompt3_output["validated_classification"])
+    p3_adj    = list(prompt3_output.get("adjustments", []))
+    restored  = []
 
-    # Nothing to guard if no hard rules fired
-    if not code_adjustments:
-        print("code adjustment is empty")
-        #return prompt3_output
-        return state
-
-    # Work on copies — do not mutate inputs
-    validated  = dict(prompt3_output["validated_classification"])
-    p3_adj     = list(prompt3_output.get("adjustments", []))
-    restored   = []
-
+    # ── Guard 1: Protect Code B corrections ──────────────────
     for code_adj in code_adjustments:
         component  = code_adj["component"]
         hard_value = code_adj["updated_value"]
         current    = validated.get(component)
-
-        # Check if Prompt 3 reversed the hard rule correction
         if current != hard_value:
-
-            # Restore the hard rule value
             validated[component] = hard_value
-
-            # Remove the bad Prompt 3 adjustment for this component
-            p3_adj = [
-                a for a in p3_adj
-                if a["component"] != component
-            ]
-
-            # Document the restoration
+            p3_adj = [a for a in p3_adj 
+                      if a["component"] != component]
             restored.append({
                 "component":      component,
                 "previous_value": current,
                 "updated_value":  hard_value,
-                "reason":         (
-                    f"System restored — Prompt 3 reversed a "
-                    f"hard rule correction. "
-                    f"Hard rule: {code_adj['reason']}"
-                )
+                "reason": f"System restored — Prompt 3 reversed "
+                          f"Code B correction. Rule: "
+                          f"{code_adj['reason']}"
             })
 
-    # Rebuild final output
+    # ── Guard 2: Re-run hard rules against Prompt 3 output ───
+    # This catches reversals of values Code B did not need
+    # to correct (they were already correct from Prompt 2)
+    chars = (understanding
+             .get("understanding", {})
+             .get("control_characteristics", {}))
+
+    raw_layer = chars.get("implementation_layer", {})
+    raw_freq  = chars.get("frequency", {})
+
+    layer = (raw_layer.get("value","")
+             if isinstance(raw_layer, dict)
+             else str(raw_layer)).lower()
+
+    freq = (raw_freq.get("value","")
+            if isinstance(raw_freq, dict)
+            else str(raw_freq)).lower()
+
+    def restore(component, required_value, rule):
+        if validated.get(component) != required_value:
+            old = validated[component]
+            validated[component] = required_value
+            # Remove bad Prompt 3 adjustment
+            nonlocal p3_adj
+            p3_adj = [a for a in p3_adj
+                      if a["component"] != component]
+            restored.append({
+                "component":      component,
+                "previous_value": old,
+                "updated_value":  required_value,
+                "reason": f"System restored — {rule}"
+            })
+
+    # Re-apply all five hard rules
+    if validated.get("Automation"):
+        restore("TechnicalEnforcement", True,
+                "Automation=TRUE requires TechnicalEnforcement=TRUE")
+
+    if validated.get("GovernanceIntent"):
+        restore("Lifecycle", True,
+                "GovernanceIntent=TRUE requires Lifecycle=TRUE")
+
+    if "policy" in layer or "process" in layer:
+        restore("Lifecycle", True,
+                f"implementation_layer '{layer}' requires Lifecycle=TRUE")
+
+    if freq == "periodic":
+        restore("Lifecycle", True,
+                "frequency=periodic requires Lifecycle=TRUE")
+
+    others = ["GovernanceIntent","TechnicalEnforcement",
+              "Monitoring","Automation","Lifecycle"]
+    if any(validated.get(d) for d in others):
+        restore("StrategicIntent", False,
+                "StrategicIntent=FALSE — other dimensions are TRUE")
+
+    # ── Rebuild output ────────────────────────────────────────
     final = dict(prompt3_output)
     final["validated_classification"] = validated
     final["adjustments"] = p3_adj + restored
 
-    # Update validation_summary if restorations were made
     if restored:
         final["validation_summary"] = dict(
-            prompt3_output.get("validation_summary", {})
-        )
+            prompt3_output.get("validation_summary", {}))
         final["validation_summary"]["adjustments_made"] = True
         final["validation_summary"]["system_restored"]  = True
         final["validation_summary"]["restored_count"]   = len(restored)
 
     state.ds_classification_validated = final
     print("GUARD_hard_rule_reversals = ", state.ds_classification_validated)
-    return state
+    return state   
