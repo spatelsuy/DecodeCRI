@@ -1,3 +1,4 @@
+from models import CRIDSGeneral, CRIState
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -5,7 +6,6 @@ import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Response
-from models import CRIDSGeneral, CRIState
 from graph import cri_ds_decodeClassify_runtime
 from session_store import SESSION_STORE
 from typing import Dict, List, Any, Optional
