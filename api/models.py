@@ -8,6 +8,11 @@ class CRIDSGeneral(BaseModel):
 
     
 class CRIState(BaseModel):
+    #Keep Promots for Temp
+    CRI_DS_INTERPRETATION: str | None = None
+    CRI_DS_CLASSIFY: str | None = None
+    CRI_DS_VALIDATE: str | None = None
+    
     #keep CRI DS
     cri_ds_statement: str | None = None
     
