@@ -636,6 +636,7 @@ function getCriDeliveable(){
     });	
 }
 
+
 function convertResponseToHTML(criResponse, profileID, data) {
     popup.document.close();
     popup.document.open();
@@ -691,6 +692,7 @@ function convertResponseToHTML(criResponse, profileID, data) {
     </div>`;
 
     // ── Section 2: DS Classification (left) + Validated (right) ──────────────
+    // No Reason column in validated table — user sees the result, not the process
     const classifRows = Object.entries(classif)
         .map(([key, { value, justification }], i) => `
         <tr class="${i % 2 === 0 ? '' : 'alt'}">
@@ -699,22 +701,12 @@ function convertResponseToHTML(criResponse, profileID, data) {
             <td class="just">${justification}</td>
         </tr>`).join('');
 
-	const flagsHTML = Object.entries(validated.validated_classification)
-		.map(([key, value], i) => {
-			const match = validated.adjustments.find(a => a.component === key);
-
-			return `
-			<tr class="${i % 2 === 0 ? '' : 'alt'}">
-				<td class="cat">${key}</td>
-				<td class="val-cell">${badge(value)}</td>
-				<td class="reason-cell">${match ? match.reason : ''}</td>
-			</tr>`;
-		}).join('');
-	
-    const adjustHTML = validated.adjustments?.length > 0
-        ? `<div class="label" style="margin-top:12px">Adjustments</div>
-           <ul>${validated.adjustments.map(a => `<li>${JSON.stringify(a)}</li>`).join('')}</ul>`
-        : `<p class="no-adj">No adjustments made.</p>`;
+    const flagsHTML = Object.entries(validated.validated_classification)
+        .map(([key, value], i) => `
+        <tr class="${i % 2 === 0 ? '' : 'alt'}">
+            <td class="cat">${key}</td>
+            <td class="val-cell">${badge(value)}</td>
+        </tr>`).join('');
 
     const splitHTML = `
     <div class="card split-card">
@@ -733,17 +725,173 @@ function convertResponseToHTML(criResponse, profileID, data) {
         </div>
         <div class="split-divider"></div>
         <div class="split-right">
-            <div class="card-title">🏷️ DS Validated Classification</div>
+            <div class="card-title">✅ Validated Classification</div>
             <table>
                 <thead>
                     <tr>
                         <th>Category</th>
                         <th style="width:62px;text-align:center">Value</th>
-						<th>Reason</th>
                     </tr>
                 </thead>
                 <tbody>${flagsHTML}</tbody>
             </table>
+        </div>
+    </div>`;
+
+    // ── Section 3: Classification Notes ──────────────────────────────────────
+    // Show only when Prompt 2 value differs from validated value
+    // Plain English — no pipeline language, no rule names
+    const prompt2Values = Object.fromEntries(
+        Object.entries(classif).map(([k, v]) => [k, v.value])
+    );
+
+    const validatedValues = validated.validated_classification;
+
+    const changedDimensions = Object.entries(validatedValues)
+        .filter(([dim, val]) => prompt2Values[dim] !== val);
+
+    const dimensionNotes = {
+        GovernanceIntent:     {
+            toTrue:  "GovernanceIntent confirmed — this control establishes policy, accountability, or organizational direction.",
+            toFalse: "GovernanceIntent confirmed as not applicable — this control does not establish governance direction."
+        },
+        TechnicalEnforcement: {
+            toTrue:  "TechnicalEnforcement confirmed — this control is enforced through systems or technical mechanisms.",
+            toFalse: "TechnicalEnforcement confirmed as not applicable — this control does not enforce through technical mechanisms."
+        },
+        Monitoring:           {
+            toTrue:  "Monitoring confirmed — this control involves detection, logging, or visibility into system state.",
+            toFalse: "Monitoring confirmed as not applicable — this control does not observe or detect system state."
+        },
+        Automation:           {
+            toTrue:  "Automation confirmed — this control executes automatically without manual intervention.",
+            toFalse: "Automation confirmed as not applicable — this control requires human execution."
+        },
+        Lifecycle:            {
+            toTrue:  "Lifecycle confirmed — this control requires ongoing management, periodic reviews, or recurring activity.",
+            toFalse: "Lifecycle confirmed as not applicable — this control is not a recurring or ongoing obligation."
+        },
+        StrategicIntent:      {
+            toTrue:  "StrategicIntent confirmed — this control represents high-level direction with no operational mechanics.",
+            toFalse: "StrategicIntent confirmed as not applicable — this control has active operational dimensions."
+        }
+    };
+
+    const classificationNotesHTML = changedDimensions.length > 0
+        ? `
+    <div class="card">
+        <div class="card-title">📝 Classification Notes</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:160px">Dimension</th>
+                    <th style="width:62px;text-align:center">Final Value</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${changedDimensions.map(([dim, val], i) => `
+                <tr class="${i % 2 === 0 ? '' : 'alt'}">
+                    <td class="cat">${dim}</td>
+                    <td class="val-cell">${badge(val)}</td>
+                    <td class="just">${dimensionNotes[dim]
+                        ? (val ? dimensionNotes[dim].toTrue : dimensionNotes[dim].toFalse)
+                        : (val ? `${dim} confirmed TRUE.` : `${dim} confirmed FALSE.`)
+                    }</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>
+    </div>`
+        : '';
+
+    // ── Section 4: Examination Considerations (Tensions) ─────────────────────
+    // Only shown when tensions exist — renamed from Tensions for user clarity
+    const tensionsRowsHTML = (validated.tensions && validated.tensions.length > 0)
+        ? validated.tensions.map((t, i) => `
+            <tr class="${i % 2 === 0 ? '' : 'alt'}">
+                <td class="cat">${t.dimension}</td>
+                <td class="just">${t.description}</td>
+                <td class="just">${t.exam_implication}</td>
+                <td class="just">${t.recommendation}</td>
+            </tr>`).join('')
+        : null;
+
+    const examinationConsiderationsHTML = tensionsRowsHTML
+        ? `
+    <div class="card">
+        <div class="card-title">⚡ Examination Considerations</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:130px">Dimension</th>
+                    <th>Description</th>
+                    <th>What Examiner Will Probe</th>
+                    <th>Recommendation</th>
+                </tr>
+            </thead>
+            <tbody>${tensionsRowsHTML}</tbody>
+        </table>
+    </div>`
+        : '';
+
+    // ── Section 5: Evidence to Prepare (Exam Guidance) ───────────────────────
+    // Renamed from Exam Guidance — more actionable language for user
+    const examRowsHTML = (validated.exam_guidance && validated.exam_guidance.length > 0)
+        ? validated.exam_guidance.map((e, i) => `
+            <tr class="${i % 2 === 0 ? '' : 'alt'}">
+                <td class="cat">${e.dimension}</td>
+                <td class="just">${e.evidence_required}</td>
+                <td class="just">${e.examiner_likely_to_probe}</td>
+            </tr>`).join('')
+        : null;
+
+    const evidenceToPrepareHTML = examRowsHTML
+        ? `
+    <div class="card">
+        <div class="card-title">📌 Evidence to Prepare</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:130px">Dimension</th>
+                    <th>Evidence Required</th>
+                    <th>Examiner Likely to Probe</th>
+                </tr>
+            </thead>
+            <tbody>${examRowsHTML}</tbody>
+        </table>
+    </div>`
+        : '';
+
+    // ── Section 6: Examination Status (Validation Summary) ───────────────────
+    // Simplified — only confidence and readiness shown to user
+    const vs = validated.validation_summary;
+
+    const confidenceConfig = {
+        high:   { cls: 'conf-high',   label: 'HIGH' },
+        medium: { cls: 'conf-medium', label: 'MEDIUM' },
+        low:    { cls: 'conf-low',    label: 'LOW' }
+    };
+
+    const conf = confidenceConfig[vs.overall_confidence] || confidenceConfig.medium;
+
+    const readinessMessage = vs.examination_ready
+        ? `<span class="readiness-ready">✔ This control is examination-ready</span>`
+        : `<span class="readiness-review">⚠ This control requires review before examination</span>`;
+
+    const examinationStatusHTML = `
+    <div class="card">
+        <div class="card-title">📊 Examination Status</div>
+        <div class="status-grid">
+            <div class="status-item">
+                <div class="label">Classification Confidence</div>
+                <div class="status-value">
+                    <span class="conf-badge ${conf.cls}">${conf.label}</span>
+                </div>
+            </div>
+            <div class="status-item status-readiness">
+                <div class="label">Examination Readiness</div>
+                <div class="status-value">${readinessMessage}</div>
+            </div>
         </div>
     </div>`;
 
@@ -765,7 +913,11 @@ function convertResponseToHTML(criResponse, profileID, data) {
     </div>
 
     ${interpHTML}
-    ${splitHTML}`;
+    ${splitHTML}
+    ${classificationNotesHTML}
+    ${examinationConsiderationsHTML}
+    ${evidenceToPrepareHTML}
+    ${examinationStatusHTML}`;
 
     // ── Full document ─────────────────────────────────────────────────────────
     popup.document.write(`<!DOCTYPE html>
@@ -901,16 +1053,43 @@ function convertResponseToHTML(criResponse, profileID, data) {
     .badge-yes { background: #2e7d32; }
     .badge-no  { background: #b71c1c; }
 
-    /* ── Flags list (right panel) ── */
-    .flags-list { display: flex; flex-direction: column; gap: 5px; }
-    .flag-row {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 5px 10px; border-radius: 5px;
-        background: #fff; border: 1px solid #e0e0e0;
-        font-size: 12px;
+    /* ── Confidence badge ── */
+    .conf-badge {
+        display: inline-block; padding: 3px 14px;
+        border-radius: 10px; font-size: 11px;
+        font-weight: 700; letter-spacing: 0.5px;
     }
-    .flag-label { font-weight: 600; color: #333; }
-    .no-adj { color: #999; font-style: italic; font-size: 11px; margin-top: 10px; }
+    .conf-high   { background: #e8f5e9; color: #2e7d32;
+                   border: 1px solid #a5d6a7; }
+    .conf-medium { background: #fff8e1; color: #f57f17;
+                   border: 1px solid #ffe082; }
+    .conf-low    { background: #ffebee; color: #b71c1c;
+                   border: 1px solid #ef9a9a; }
+
+    /* ── Examination status ── */
+    .status-grid {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 12px;
+        align-items: center;
+    }
+    .status-item {
+        background: #f5f8ff;
+        border: 1px solid #dce8f5;
+        border-radius: 6px;
+        padding: 10px 14px;
+    }
+    .status-readiness { grid-column: span 1; }
+    .status-value { margin-top: 6px; }
+
+    .readiness-ready {
+        font-size: 13px; font-weight: 700;
+        color: #2e7d32;
+    }
+    .readiness-review {
+        font-size: 13px; font-weight: 700;
+        color: #f57f17;
+    }
 
     /* ── Print ── */
     @media print {
@@ -939,7 +1118,9 @@ function savePDF() {
 
     return bodyHTML;
 }
-	
+
+
+
 function doColor(txt){
 	let retText = "";
 	if(txt === false || String(txt).trim() === "false"){
