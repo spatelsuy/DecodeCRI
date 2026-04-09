@@ -1,4 +1,3 @@
-import os
 import yaml
 import time
 from typing import Dict, Any
@@ -7,19 +6,34 @@ from groq_client import call_groq
 from session_store import SESSION_STORE
 
 # ----------------------------
+# SYSTEM PROMPTS (Shortened)
+# ----------------------------
+CRI_DS_INTERPRETATION = """
+Dummy
+"""
+
+CRI_DS_CLASSIFY = """
+Dummy
+"""
+
+CRI_DS_VALIDATE = """
+Dummy
+"""
+
+
+# ----------------------------
 # Stage - 1 (Prompt 1) - Interpret the DS and response guide
 # ----------------------------
 def get_ds_decode(state: CRIState) -> CRIState:
     try:
-        print("INTERPRET THE DS AND ITS RESPONSE GUIDE")
+        print("INTERPRET THE DS AND ITS RESPONSE GUIDE PROMOT is \n", state.CRI_DS_INTERPRETATION)
         cri_ds_yaml = yaml.safe_load(state.cri_ds_statement)
         cri_block = cri_ds_yaml["cri_ds_statement"]
         diagnostic_statement = cri_block["diagnostic_statement"]
         response_guide = cri_block["ResponseGuide"]
-        CRI_DS_INTERPRETATION = os.getenv("CRI_DS_INTERPRETATION")
         
         result = call_groq(
-            system_prompt=CRI_DS_INTERPRETATION,
+            system_prompt=state.CRI_DS_INTERPRETATION,
             user_payload={  "diagonesic_statement": diagnostic_statement, 
                             "response_guide": response_guide},
             model="openai/gpt-oss-120b"
@@ -245,10 +259,9 @@ def get_ds_classify(state: CRIState) -> CRIState:
         cri_block = cri_ds_yaml["cri_ds_statement"]
         diagnostic_statement = cri_block["diagnostic_statement"]
         response_guide = cri_block["ResponseGuide"]
-        CRI_DS_CLASSIFY = os.getenv("CRI_DS_CLASSIFY")
         
         result = call_groq(
-            system_prompt=CRI_DS_CLASSIFY,
+            system_prompt=state.CRI_DS_CLASSIFY,
             user_payload={"diagonesic_statement": diagnostic_statement, 
                             "response_guide": response_guide,
                             "understanding": state.cri_interpretation, 
@@ -415,10 +428,9 @@ def get_ds_validate_classify(state: CRIState) -> CRIState:
         response_guide = cri_block["ResponseGuide"]
         classification = state.ds_classification
         #print("\ninterim classification = \n", classification)
-        CRI_DS_VALIDATE = os.getenv("CRI_DS_VALIDATE")
         time.sleep(60) 
         result = call_groq(
-            system_prompt=CRI_DS_VALIDATE,
+            system_prompt=state.CRI_DS_VALIDATE,
             user_payload={  "diagonesic_statement": diagnostic_statement, 
                             "response_guide": response_guide, 
                             "Classification": state.validated_classification_input},
@@ -455,15 +467,119 @@ def validate_input_agent(state: CRIState) -> CRIState:
         if not error_flag:
             print("All required fields exist.")
             #print("Profile ID =", cri_block["profile_id"])
-            #print("Diagnostic Statement =", cri_block["diagnostic_statement"])        
-        
+            #print("Diagnostic Statement =", cri_block["diagnostic_statement"])  
+
         return state
     except Exception as e:
         print("Unable to validate input. Error is: ", str(e))
         raise HTTPException(status_code=500, detail=str(e))  
 
 
+def guard_hard_rule_reversals_OLD(state: CRIState ) -> CRIState:
+    prompt3_output = state.ds_classification_validated
+    code_adjustments = state.validated_classification_input["classification"]["code_adjustments"]
+
+    """
+    Safety net after Prompt 3 runs.
+    
+    Ensures Prompt 3 has not reversed any hard rule
+    corrections made by Code Layer B (apply_hard_rules).
+    
+    If Prompt 3 reversed a hard rule correction:
+    - Restores the correct value
+    - Removes the bad Prompt 3 adjustment
+    - Documents the restoration
+    
+    If code_adjustments is empty — nothing to guard,
+    returns prompt3_output unchanged.
+    
+    Args:
+        prompt3_output:   Raw output dict from Prompt 3
+        code_adjustments: List of adjustments from 
+                          apply_hard_rules()
+    
+    Returns:
+        Final verified output dict
+        
+        
+    return {
+        "classification": {
+            # What Prompt 2 classified with justifications
+            "prompt2_output": prompt2_output["Classification"],
+
+            # What the classification looks like after
+            # hard rules applied by code
+            "validated_classification": validated,
+
+            # What hard rules changed — Prompt 3 must not
+            # re-apply these
+            "code_adjustments": adjustments
+        }        
+    """
+
+    # Nothing to guard if no hard rules fired
+    if not code_adjustments:
+        print("code adjustment is empty")
+        #return prompt3_output
+        return state
+
+    # Work on copies — do not mutate inputs
+    validated  = dict(prompt3_output["validated_classification"])
+    p3_adj     = list(prompt3_output.get("adjustments", []))
+    restored   = []
+
+    for code_adj in code_adjustments:
+        component  = code_adj["component"]
+        hard_value = code_adj["updated_value"]
+        current    = validated.get(component)
+
+        # Check if Prompt 3 reversed the hard rule correction
+        if current != hard_value:
+
+            # Restore the hard rule value
+            validated[component] = hard_value
+
+            # Remove the bad Prompt 3 adjustment for this component
+            p3_adj = [
+                a for a in p3_adj
+                if a["component"] != component
+            ]
+
+            # Document the restoration
+            restored.append({
+                "component":      component,
+                "previous_value": current,
+                "updated_value":  hard_value,
+                "reason":         (
+                    f"System restored — Prompt 3 reversed a "
+                    f"hard rule correction. "
+                    f"Hard rule: {code_adj['reason']}"
+                )
+            })
+
+    # Rebuild final output
+    final = dict(prompt3_output)
+    final["validated_classification"] = validated
+    final["adjustments"] = p3_adj + restored
+
+    # Update validation_summary if restorations were made
+    if restored:
+        final["validation_summary"] = dict(
+            prompt3_output.get("validation_summary", {})
+        )
+        final["validation_summary"]["adjustments_made"] = True
+        final["validation_summary"]["system_restored"]  = True
+        final["validation_summary"]["restored_count"]   = len(restored)
+
+    state.ds_classification_validated = final
+    print("GUARD_hard_rule_reversals = ", state.ds_classification_validated)
+    return state
+    
+    
+    
 def guard_hard_rule_reversals(state: CRIState ) -> CRIState:
+
+
     prompt3_output = state.ds_classification_validated
     code_adjustments = state.validated_classification_input["classification"]["code_adjustments"]
     understanding = state.cri_interpretation
