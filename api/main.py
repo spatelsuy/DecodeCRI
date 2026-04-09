@@ -1,16 +1,13 @@
-import sys
 import os
-from supabase import create_client, Client
 from dotenv import load_dotenv
-
-sys.path.insert(0, os.path.dirname(__file__))
-
+from supabase import create_client, Client
 import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Response
 
 from models import CRIDSGeneral, CRIState
+
 from graph import cri_ds_decodeClassify_runtime
 
 from session_store import SESSION_STORE
@@ -58,6 +55,41 @@ key: str = os.getenv("SUPABASE_SERVICE_KEY")
 # Initialize the Supabase client
 supabase: Client = create_client(url, key)
 
+def read_prompt_from_db(state: CRIState) -> bool:
+    try:
+        table_name = 'PROMPTS'
+        response = (
+            supabase.table(table_name)
+            .select("PROMPT_NAME, PROMPT_STR")        # Only select the columns you need
+            .execute()
+            )
+        # Perform the insert operation
+        #print(response.data)
+        rows = response.data
+        count = len(rows)
+        if count < 1:
+            return False
+
+        for row in rows:
+            print("prompt name =", row['PROMPT_NAME'])
+            if row['PROMPT_NAME'] == "CRI_DS_INTERPRETATION":
+                state.CRI_DS_INTERPRETATION = row['PROMPT_STR']
+                #print("Value of CRI_DS_INTERPRETATION = ", state.CRI_DS_INTERPRETATION)
+            elif row['PROMPT_NAME'] == "CRI_DS_CLASSIFY":
+                state.CRI_DS_CLASSIFY = row['PROMPT_STR']
+                #print("Value of CRI_DS_CLASSIFY = ", state.CRI_DS_CLASSIFY)
+            elif row['PROMPT_NAME'] == "CRI_DS_VALIDATE":
+                state.CRI_DS_VALIDATE = row['PROMPT_STR']
+                #print("Value of CRI_DS_VALIDATE = ", state.CRI_DS_VALIDATE)  
+
+        return True
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False  
+
+
+
 def read_from_database(ds_id: str, state: CRIState) -> bool:
     try:
         print("Reading Data from DB for ", ds_id)
@@ -90,7 +122,7 @@ def read_from_database(ds_id: str, state: CRIState) -> bool:
         return True
 
     except Exception as e:
-        print(f"An error occurred while reading from database: {e}")
+        print(f"An error occurred: {e}")
         return False  
         
 
@@ -99,7 +131,7 @@ def write_to_database(ds_id: str, state: CRIState) -> bool:
     print("Writing to DB")
 
     """
-    Inserts data into a Supabase table.
+    Inserts data into a Supabase table.    
     """
     table_name = 'CRI_DECODE' # Replace with your actual table name
     data_to_insert = [
@@ -118,7 +150,7 @@ def write_to_database(ds_id: str, state: CRIState) -> bool:
         return True
 
     except Exception as e:
-        print(f"An error occurred while writing to database: {e}")
+        print(f"An error occurred: {e}")
         return False
 
 
@@ -138,12 +170,13 @@ def assess(request: CRIDSGeneral):
         ds_id = cri_ds_data["cri_ds_statement"]["profile_id"]
         state = CRIState(cri_ds_statement = request.cri_ds_statement)
         
+        
         result = read_from_database(ds_id, state)
         if result == True:
             print("Data already exist in DB")
-            #print("INTERPRITATION = ", state.cri_interpretation)
-            #print("CLASSIFICATION = ", state.ds_classification)
-            #print("VALIDATED CLASSIFICATION = ", state.ds_classification_validated)
+            print("INTERPRITATION = ", state.cri_interpretation)
+            print("CLASSIFICATION = ", state.ds_classification)
+            print("VALIDATED CLASSIFICATION = ", state.ds_classification_validated)
             return JSONResponse({
                 "cri_interpretation": state.cri_interpretation, 
                 "ds_classification": state.ds_classification,
@@ -151,6 +184,7 @@ def assess(request: CRIDSGeneral):
             })
         else:
             print("NEED TO CONNECT LLM")
+            read_prompt_from_db(state)
         
         
         result = cri_ds_decodeClassify_runtime.invoke(state)
@@ -174,8 +208,6 @@ def assess(request: CRIDSGeneral):
         print("Error in getting CRI DS Decode & Classify\n", str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
     
 @app.get("/health")
 def health():
@@ -192,3 +224,4 @@ def health():
         "pattern": "Manager–Worker + Planner–Executor",
         "engine": "LangGraph"
     }
+
