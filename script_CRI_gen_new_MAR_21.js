@@ -819,7 +819,7 @@ function convertResponseToHTML(criResponse, profileID, data) {
     const examinationConsiderationsHTML = tensionsRowsHTML
         ? `
     <div class="card">
-        <div class="card-title">⚡ Examination Considerations</div>
+        <div class="card-title">⚡ Assessment Considerations</div>
         <table>
             <thead>
                 <tr>
@@ -875,12 +875,12 @@ function convertResponseToHTML(criResponse, profileID, data) {
     const conf = confidenceConfig[vs.overall_confidence] || confidenceConfig.medium;
 
     const readinessMessage = vs.examination_ready
-        ? `<span class="readiness-ready">✔ This control is examination-ready</span>`
-        : `<span class="readiness-review">⚠ This control requires review before examination</span>`;
+        ? `<span class="readiness-ready">✔ This control is assessment-ready</span>`
+        : `<span class="readiness-review">⚠ This control requires review before assessment</span>`;
 
     const examinationStatusHTML = `
     <div class="card">
-        <div class="card-title">📊 Examination Status</div>
+        <div class="card-title">📊 Assessment Readiness Status</div>
         <div class="status-grid">
             <div class="status-item">
                 <div class="label">Classification Confidence</div>
@@ -889,7 +889,7 @@ function convertResponseToHTML(criResponse, profileID, data) {
                 </div>
             </div>
             <div class="status-item status-readiness">
-                <div class="label">Examination Readiness</div>
+                <div class="label">Assessment Readiness</div>
                 <div class="status-value">${readinessMessage}</div>
             </div>
         </div>
