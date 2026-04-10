@@ -1016,13 +1016,13 @@ function convertResponseToHTML(criResponse, profileID, data) {
         overflow: hidden;
     }
     .split-left {
-        width: 55%;
-        padding: 12px 16px;
+        width: 75%;
+        padding: 6px 8px;
         min-width: 0;
     }
     .split-right {
-        width: 45%;
-        padding: 12px 16px;
+        width: 25%;
+        padding: 6px 8px;
         min-width: 0;
         background: #fafcff;
     }
