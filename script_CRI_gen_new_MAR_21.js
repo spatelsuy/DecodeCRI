@@ -880,7 +880,7 @@ function convertResponseToHTML(criResponse, profileID, data) {
         	? `<span class="readiness-ready">✔ This control is assessment-ready</span>`
         	: `<span class="readiness-review">⚠ This control requires review before assessment</span>`;
 
-    	examinationStatusHTML = ""
+    	examinationStatusHTML = `
     	<div class="card">
         	<div class="card-title">📊 Assessment Readiness Status</div>
         	<div class="status-grid">
