@@ -872,29 +872,31 @@ function convertResponseToHTML(criResponse, profileID, data) {
         low:    { cls: 'conf-low',    label: 'LOW' }
     };
 
-    const conf = confidenceConfig[vs.overall_confidence] || confidenceConfig.medium;
+	var examinationStatusHTML = "";
+	if(vs!=null){
+    	const conf = confidenceConfig[vs.overall_confidence] || confidenceConfig.medium;
+		
+    	const readinessMessage = vs.examination_ready
+        	? `<span class="readiness-ready">✔ This control is assessment-ready</span>`
+        	: `<span class="readiness-review">⚠ This control requires review before assessment</span>`;
 
-    const readinessMessage = vs.examination_ready
-        ? `<span class="readiness-ready">✔ This control is assessment-ready</span>`
-        : `<span class="readiness-review">⚠ This control requires review before assessment</span>`;
-
-    const examinationStatusHTML = `
-    <div class="card">
-        <div class="card-title">📊 Assessment Readiness Status</div>
-        <div class="status-grid">
-            <div class="status-item">
-                <div class="label">Classification Confidence</div>
-                <div class="status-value">
-                    <span class="conf-badge ${conf.cls}">${conf.label}</span>
-                </div>
-            </div>
-            <div class="status-item status-readiness">
-                <div class="label">Assessment Readiness</div>
-                <div class="status-value">${readinessMessage}</div>
-            </div>
-        </div>
-    </div>`;
-
+    	examinationStatusHTML = ""
+    	<div class="card">
+        	<div class="card-title">📊 Assessment Readiness Status</div>
+        	<div class="status-grid">
+            	<div class="status-item">
+                	<div class="label">Classification Confidence</div>
+                	<div class="status-value">
+                    	<span class="conf-badge ${conf.cls}">${conf.label}</span>
+                	</div>
+            	</div>
+            	<div class="status-item status-readiness">
+                	<div class="label">Assessment Readiness</div>
+                	<div class="status-value">${readinessMessage}</div>
+            	</div>
+        	</div>
+    	</div>`;
+	}
     // ── Assemble body HTML ────────────────────────────────────────────────────
     const bodyHTML = `
     <div class="top-bar">
