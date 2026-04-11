@@ -1,5 +1,105 @@
 // script.js - Enhanced Version with YAML Generation
+var globalPopUpHTML = `
+<html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #0d1f3c;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 24px;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid rgba(99,179,237,0.2);
+    border-top-color: #63b3ed;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .msg {
+    font-size: 22px;
+    font-weight: 700;
+    color: #63b3ed;
+    min-height: 32px;
+    text-align: center;
+    transition: opacity 0.3s ease;
+    letter-spacing: 0.02em;
+  }
+  .timer {
+    font-size: 13px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+  .brand {
+    font-size: 10px;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <div class="msg" id="msg">Connecting...</div>
+  <div class="timer" id="demo"></div>
+  <div class="brand">CRI Control Intelligence Suite</div>
 
+<script>
+  // ── Timer ──────────────────────────────────────────────
+  var initialTime = new Date().getTime();
+  var x = setInterval(function() {
+    var now      = new Date().getTime();
+    var distance = now - initialTime;
+    var minutes  = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    var seconds  = Math.floor((distance % (1000 * 60)) / 1000);
+    document.getElementById("demo").innerHTML = minutes + "m " + seconds + "s";
+    if (distance < 0) {
+      clearInterval(x);
+      document.getElementById("demo").innerHTML = "EXPIRED";
+    }
+  }, 1000);
+
+  // ── Cycling messages ───────────────────────────────────
+  var messages = [
+    "Connecting...",
+    "Reading control...",
+    "Interpreting intent...",
+    "Extracting characteristics...",
+    "Classifying dimensions...",
+    "Applying rules...",
+    "Validating...",
+    "Cross-checking...",
+    "Generating guidance...",
+    "Finalizing...",
+    "Almost ready..."
+  ];
+
+  var msgIndex = 0;
+  var msgEl    = document.getElementById("msg");
+
+  var y = setInterval(function() {
+    msgEl.style.opacity = "0";
+    setTimeout(function() {
+      msgIndex = msgIndex + 1
+      if(msgIndex >=messages.length){
+        msgEl.innerHTML    = messages[messages.length - 1];
+        msgEl.style.opacity = "1";
+      }
+      else{
+         msgEl.innerHTML    = messages[msgIndex];
+         msgEl.style.opacity = "1";
+	    }
+    }, 300);
+  }, 5500);
+<\/script>
+</body></html>`;
 
 export const assessmentState = {
   gen: {
@@ -1220,7 +1320,7 @@ function initCRI(criJson) {
 	// Add click event
 	decodeClassifyValidateButton.addEventListener('click', function () {
 		popup = window.open("", "popupWindow", "width=1500,height=600");
-		popup.document.write("<html><body><p>Calling AI Agent...waiting for response...</p></body></html>");		
+		popup.document.write(globalPopUpHTML);		
 		getDecodeAndClassify();
 	});	
 	operationSection.appendChild(decodeClassifyValidateButton);
