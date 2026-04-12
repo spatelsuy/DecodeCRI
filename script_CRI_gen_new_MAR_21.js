@@ -880,12 +880,12 @@ function convertResponseToHTML(criResponse, profileID, data) {
     const classificationNotesHTML = changedDimensions.length > 0
         ? `
     <div class="card">
-        <div class="card-title">📝 Classification Notes</div>
+        <div class="card-title">📝 Classification Notes [Conduct a Manual Review]</div>
         <table>
             <thead>
                 <tr>
                     <th style="width:160px">Dimension</th>
-                    <th style="width:62px;text-align:center">Final Value</th>
+                    <th style="width:80px;text-align:center">Final Value</th>
                     <th>Note</th>
                 </tr>
             </thead>
