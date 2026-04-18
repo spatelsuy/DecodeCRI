@@ -162,6 +162,33 @@ def write_to_database(ds_id: str, state: CRIState) -> bool:
 # AGENT MAIN ENTRYPOINT
 # ----------------------------
 
+@app.post("/is_ds_classified")
+def assess(request: CRIDSGeneral):
+    try:
+        cri_ds_data = yaml.safe_load(request.cri_ds_statement)
+        print("\nCRI_DS_DATA=", cri_ds_data)
+        state = CRIState(cri_ds_statement = request.cri_ds_statement)
+        result = read_from_database(cri_ds_data, state)
+        if result == True:
+            print("Data already exist in DB")
+            print("INTERPRITATION = ", state.cri_interpretation)
+            print("CLASSIFICATION = ", state.ds_classification)
+            print("VALIDATED CLASSIFICATION = ", state.ds_classification_validated)
+            return JSONResponse({
+                "cri_interpretation": state.cri_interpretation, 
+                "ds_classification": state.ds_classification,
+                "cri_validated_classification": state.ds_classification_validated,
+                "status":"Available"
+            })
+        else:
+            return JSONResponse({
+                "status": "NOT_AVAILABLE"
+            })            
+    except Exception as e:
+        print("Error in getting CRI Classified Data\n", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/cri_ds_decodeClassify")
 def assess(request: CRIDSGeneral):
     try:
@@ -184,7 +211,8 @@ def assess(request: CRIDSGeneral):
             return JSONResponse({
                 "cri_interpretation": state.cri_interpretation, 
                 "ds_classification": state.ds_classification,
-                "cri_validated_classification": state.ds_classification_validated
+                "cri_validated_classification": state.ds_classification_validated,
+                "status":"Available"
             })
         else:
             print("NEED TO CONNECT LLM")
@@ -205,7 +233,8 @@ def assess(request: CRIDSGeneral):
         return JSONResponse({
             "cri_interpretation": result["cri_interpretation"], 
             "ds_classification": result["ds_classification"],
-            "cri_validated_classification": result["ds_classification_validated"]
+            "cri_validated_classification": result["ds_classification_validated"],
+                "status":"Available"
         })        
         
     except Exception as e:
