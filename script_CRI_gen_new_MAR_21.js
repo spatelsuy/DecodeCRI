@@ -202,7 +202,24 @@ function goToNextCri(){
 	} else {
 		rightButton.disabled = false;
 	}
-	
+	const block1 = document.querySelector('.cri-statement-block');
+	IsCRIClassified(block1.dataset.profileId)
+	.then(resp_data => {
+		const data = JSON.stringify(resp_data);
+		const content = resp_data.status;
+		const classifiedStatus = document.getElementById("ds-classified_status");
+		if(content === "NOT_AVAILABLE"){
+			classifiedStatus.innerHTML = content;
+		}
+		else{
+			classifiedStatus.innerHTML = content;
+		}
+		return "SUCCESS";		
+    })
+    .catch(err => {
+		alert(err);
+        console.error(err);
+    });	
 }
 
 function goToPreviousCri(){
@@ -231,6 +248,24 @@ function goToPreviousCri(){
 	} else {
 		rightButton.disabled = false;
 	}	
+	const block1 = document.querySelector('.cri-statement-block');
+	IsCRIClassified(block1.dataset.profileId)
+	.then(resp_data => {
+		const data = JSON.stringify(resp_data);
+		const content = resp_data.status;
+		const classifiedStatus = document.getElementById("ds-classified_status");
+		if(content === "NOT_AVAILABLE"){
+			classifiedStatus.innerHTML = content;
+		}
+		else{
+			classifiedStatus.innerHTML = content;
+		}
+		return "SUCCESS";		
+    })
+    .catch(err => {
+		alert(err);
+        console.error(err);
+    });	
 }
 
 function callLLMDecodeClassify(yamlContent){
@@ -567,6 +602,14 @@ function getDecodeAndClassify(){
 		criAIResponse[profileID].cri_interpretation = resp_data.cri_interpretation;
 		criAIResponse[profileID].ds_classification = resp_data.ds_classification;
 		criAIResponse[profileID].cri_validated_classification = resp_data.cri_validated_classification;
+		const content = resp_data.status;
+		const classifiedStatus = document.getElementById("ds-classified_status");
+		if(content === "NOT_AVAILABLE"){
+			classifiedStatus.innerHTML = content;
+		}
+		else{
+			classifiedStatus.innerHTML = content;
+		}		
 		
 		let htmlText = convertResponseToHTML(criAIResponse[profileID], profileID, data);
 		
@@ -1373,7 +1416,30 @@ function initCRI(criJson) {
 	//operationSection.appendChild(regulatoryAlignmentButton);
 	
 	criContainer.appendChild(operationSection);
-    //updateCounter();
+	
+    const classifiedStatus = document.createElement('text');
+	classifiedStatus.id = "ds-classified_status";
+	classifiedStatus.innerHTML = "Testing";
+	criContainer.appendChild(classifiedStatus);
+	
+	const block1 = document.querySelector('.cri-statement-block');
+	IsCRIClassified(block1.dataset.profileId)
+	.then(resp_data => {
+		const data = JSON.stringify(resp_data);
+		const content = resp_data.status;
+		if(content === "NOT_AVAILABLE"){
+			classifiedStatus.innerHTML = content;
+		}
+		else{
+			classifiedStatus.innerHTML = content;
+		}
+		return "SUCCESS";		
+    })
+    .catch(err => {
+		alert(err);
+        console.error(err);
+    });
+
 }
 
 function generateCRIHtmlNew(criJson) {
@@ -2439,4 +2505,32 @@ function NowRunEngine(fileContents, genState) {
         ceilingRationale,
         confidenceLevel
     };
+}
+
+
+function IsCRIClassified(profileId){
+	const userName = "SunilPK";
+	const apiUrl = "http://localhost:8000/is_ds_classified";
+
+    return fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            user_name: userName,
+            cri_ds_statement: profileId
+        })
+    })
+    .then(async response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+		const data = await response.json();        
+		return data;
+    })
+    .catch(err => {
+        console.error("Connection Error:", err);
+        return "Error: " + err.message;  // Still return something
+    });	
+	return true;
 }
