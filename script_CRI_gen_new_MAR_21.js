@@ -1319,7 +1319,19 @@ function initCRI(criJson) {
 	rightButton.addEventListener('click', function () {
 		goToNextCri();
 	});	
-    
+
+    const decodeClassifyValidateButton = document.createElement('button');
+    decodeClassifyValidateButton.className = 'nav-button-cri btn-cri-classification';
+    decodeClassifyValidateButton.innerHTML = 'Decode & Classify';
+	// Add click event
+	decodeClassifyValidateButton.addEventListener('click', function () {
+		popup = window.open("", "popupWindow", "width=1500,height=600");
+		popup.document.write(globalPopUpHTML);		
+		getDecodeAndClassify();
+	});	
+	#operationSection.appendChild(decodeClassifyValidateButton);
+
+	
     // Create question counter
     const counter = document.createElement('div');
     counter.className = 'question-counter';
@@ -1329,6 +1341,7 @@ function initCRI(criJson) {
     navContainer.appendChild(leftButton);
     navContainer.appendChild(counter);
     navContainer.appendChild(rightButton);	
+	navContainer.appendChild(decodeClassifyValidateButton);
 	
 	
     criSection.appendChild(header);
@@ -1348,19 +1361,6 @@ function initCRI(criJson) {
 
     // Create left navigation button
 	const operationSection = document.createElement('div');
-
-	
-    const decodeClassifyValidateButton = document.createElement('button');
-    decodeClassifyValidateButton.className = 'nav-button-cri btn-cri-classification';
-    decodeClassifyValidateButton.innerHTML = 'Decode & Classify';
-	// Add click event
-	decodeClassifyValidateButton.addEventListener('click', function () {
-		popup = window.open("", "popupWindow", "width=1500,height=600");
-		popup.document.write(globalPopUpHTML);		
-		getDecodeAndClassify();
-	});	
-	operationSection.appendChild(decodeClassifyValidateButton);
-
 	
     //const classificationButton = document.createElement('button');
     //classificationButton.className = 'nav-button-cri btn-cri-classification';
