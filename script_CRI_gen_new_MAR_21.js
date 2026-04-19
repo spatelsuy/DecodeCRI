@@ -1329,7 +1329,7 @@ function initCRI(criJson) {
 		popup.document.write(globalPopUpHTML);		
 		getDecodeAndClassify();
 	});	
-	#operationSection.appendChild(decodeClassifyValidateButton);
+	// operationSection.appendChild(decodeClassifyValidateButton);
 
 	
     // Create question counter
