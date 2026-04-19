@@ -1421,24 +1421,6 @@ function initCRI(criJson) {
 	classifiedStatus.id = "ds-classified_status";
 	classifiedStatus.innerHTML = "Testing";
 	criContainer.appendChild(classifiedStatus);
-	
-	const block1 = document.querySelector('.cri-statement-block');
-	IsCRIClassified(block1.dataset.profileId)
-	.then(resp_data => {
-		const data = JSON.stringify(resp_data);
-		const content = resp_data.status;
-		if(content === "NOT_AVAILABLE"){
-			classifiedStatus.innerHTML = content;
-		}
-		else{
-			classifiedStatus.innerHTML = content;
-		}
-		return "SUCCESS";		
-    })
-    .catch(err => {
-		alert(err);
-        console.error(err);
-    });	
 }
 
 function generateCRIHtmlNew(criJson) {
