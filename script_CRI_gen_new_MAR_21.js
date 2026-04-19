@@ -1046,15 +1046,8 @@ function convertResponseToHTML(criResponse, profileID, data) {
         <div class="top-left">
             <span class="profile-id">Profile ${profileID}</span>
             <span class="ds-text">${doColor(dsText)}</span>
+			<span ><button class="pdf-btn" onclick="savePDF()">Save as PDF</button></span>
         </div>
-        <button class="pdf-btn" onclick="savePDF()">Save as PDF</button>
-    </div>
-
-    <div class="context-bar">
-        <span><b>Sector:</b> ${doColor(data.sectorText)}</span>
-        <span><b>Size:</b> ${doColor(data.orgSizeText)}</span>
-        <span><b>Location(s):</b> ${doColor(data.geographyText)}</span>
-        <span><b>Regulations:</b> ${doColor(data.regulatoryText)}</span>
     </div>
 
     ${interpHTML}
