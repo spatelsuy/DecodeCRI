@@ -1416,7 +1416,7 @@ function initCRI(criJson) {
 	//operationSection.appendChild(regulatoryAlignmentButton);
 	
 	criContainer.appendChild(operationSection);
-	
+
     const classifiedStatus = document.createElement('text');
 	classifiedStatus.id = "ds-classified_status";
 	classifiedStatus.innerHTML = "Testing";
@@ -1438,8 +1438,7 @@ function initCRI(criJson) {
     .catch(err => {
 		alert(err);
         console.error(err);
-    });
-
+    });	
 }
 
 function generateCRIHtmlNew(criJson) {
@@ -1511,46 +1510,6 @@ function generateCRIHtmlNew(criJson) {
         responseGuide.appendChild(respGH4);
         responseGuide.appendChild(respGHP);
         statement.appendChild(responseGuide);		
-
-		//EEE
-		//const eeeSection = document.createElement('div');
-		//responseGuide.className = 'cri-eee-section';
-		//const eeeGH4 = document.createElement('h4');
-		//eeeGH4.textContent = "Example of Effective Evidence";
-		//const eeeGHP = document.createElement('p');
-		//eeeGHP.className = 'cri-eee-guide';
-		//eeeGHP.textContent = row["EEE"];
-		
-        //responseGuide.appendChild(eeeGH4);
-        //responseGuide.appendChild(eeeGHP);
-        //statement.appendChild(eeeSection);		
-
-        // FIN section
-        //const finSection = document.createElement('div');
-        //finSection.className = 'cri-fin-section';
-        //const finH4 = document.createElement('h4');
-        //finH4.textContent = 'Financial Services References';
-		//const finP = document.createElement('p');
-		//finP.className = 'cri-financial';
-		//finP.textContent = row["Financial Services Mapping References"];
-		
-        //finSection.appendChild(finH4);
-		//finSection.appendChild(finP);
-        //statement.appendChild(finSection);	
-		
-		//const classification = document.createElement('div');
-		//classification.className = "cri-classification-section";
-		//classification.id = `classification-${row["Profile Id"]}`;
-		//classification.textContent = "";
-		//classification.style = "font-size: 1rem;";
-		//statement.appendChild(classification);
-		
-		//const evidenceList = document.createElement('div');
-		//evidenceList.className = "cri-evidence-section";
-		//evidenceList.id = `evidenceList-${row["Profile Id"]}`;
-		//evidenceList.textContent = "";
-		//evidenceList.style = "font-size: 1rem;";
-		//statement.appendChild(evidenceList);		
 		
         return statement;
     });	
