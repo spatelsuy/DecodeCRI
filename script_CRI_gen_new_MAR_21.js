@@ -2450,6 +2450,7 @@ function NowRunEngine(fileContents, genState) {
 
 
 function IsCRIClassified(profileId){
+	alert("Is CRI classified");
 	const userName = "SunilPK";
 	const apiUrl = "http://localhost:8000/is_ds_classified";
 
@@ -2466,7 +2467,8 @@ function IsCRIClassified(profileId){
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-		const data = await response.json();        
+		const data = await response.json();
+		alert(data);
 		return data;
     })
     .catch(err => {
