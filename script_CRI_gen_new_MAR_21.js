@@ -2464,6 +2464,8 @@ function NowRunEngine(fileContents, genState) {
 
 
 function IsCRIClassified(profileId){
+	const classifiedStatus = document.getElementById("ds-classified_status");
+	classifiedStatus.innerHTML = "Checking...";
 	const userName = "SunilPK";
 	const apiUrl = "https://decode-cri.vercel.app/is_ds_classified";
 
