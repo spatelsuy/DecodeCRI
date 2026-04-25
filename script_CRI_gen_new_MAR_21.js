@@ -177,6 +177,52 @@ document.addEventListener('DOMContentLoaded', function() {
 		});	
 });
 
+function gotoCount(index){
+	let newIndex = index - 1;
+	const dsContainer = document.getElementById("ds-statement-container");
+	dsContainer.innerHTML = "";
+	dsContainer.appendChild(criSectionsArray[newIndex]);	
+	
+	const counter = document.getElementById("counter-cri");
+	counter.innerHTML = `Question <span class="current-question">` + (newIndex+1) + `</span> of ${criSectionsArray.length}`;
+
+	const leftButton = document.querySelector('.nav-left-cri');
+	const rightButton = document.querySelector('.nav-right-cri');
+	
+	if (newIndex === 0) {
+		leftButton.disabled = true;
+	} else {
+		leftButton.disabled = false;
+	}
+	
+	if (newIndex === criSectionsArray.length - 1) {
+		rightButton.disabled = true;
+	} else {
+		rightButton.disabled = false;
+	}
+
+	const block1 = document.querySelector('.cri-statement-block');
+	IsCRIClassified(block1.dataset.profileId)
+	.then(resp_data => {
+		const data = JSON.stringify(resp_data);
+		const content = resp_data.status;
+		const classifiedStatus = document.getElementById("ds-classified_status");
+		if(content === "NOT_AVAILABLE"){
+			classifiedStatus.innerHTML = content;
+		}
+		else{
+			classifiedStatus.innerHTML = content;
+		}
+		return "SUCCESS";		
+    })
+    .catch(err => {
+		alert(err);
+        console.error(err);
+    });
+}
+
+
+
 function goToNextCri(){
 	const dsContainer = document.getElementById("ds-statement-container");
 	const block = document.querySelector('.cri-statement-block');
@@ -1319,6 +1365,7 @@ function initCRI(criJson) {
 	rightButton.addEventListener('click', function () {
 		goToNextCri();
 	});	
+	
 
     const decodeClassifyValidateButton = document.createElement('button');
     decodeClassifyValidateButton.className = 'nav-button-cri btn-cri-classification';
@@ -1331,7 +1378,22 @@ function initCRI(criJson) {
 	});	
 	// operationSection.appendChild(decodeClassifyValidateButton);
 
-	
+	const inputNumber = document.createElement('input');
+	inputNumber.id = "counter";
+	inputNumber.type = "number";
+	inputNumber.min = 1;
+	inputNumber.max = dsRows.length;
+
+	inputNumber.addEventListener('keydown', function(event) {
+		if (event.key === 'Enter') {
+			if(inputNumber.value < inputNumber.min)
+				inputNumber.value = inputNumber.min;
+			if(inputNumber.value > inputNumber.max)
+				inputNumber.value = inputNumber.max;
+			gotoCount(inputNumber.value);
+		}
+	});
+		
     // Create question counter
     const counter = document.createElement('div');
     counter.className = 'question-counter';
@@ -1341,6 +1403,7 @@ function initCRI(criJson) {
     navContainer.appendChild(leftButton);
     navContainer.appendChild(counter);
     navContainer.appendChild(rightButton);	
+	navContainer.appendChild(inputNumber);
 	navContainer.appendChild(decodeClassifyValidateButton);
 	
 	
