@@ -1386,11 +1386,17 @@ function initCRI(criJson) {
 
 	inputNumber.addEventListener('keydown', function(event) {
 		if (event.key === 'Enter') {
-			if(inputNumber.value < inputNumber.min)
-				inputNumber.value = inputNumber.min;
-			if(inputNumber.value > inputNumber.max)
-				inputNumber.value = inputNumber.max;
-			gotoCount(inputNumber.value);
+			let value = Number(inputNumber.value);
+			let min = Number(inputNumber.min);
+			let max = Number(inputNumber.max);
+			if (value < min) {
+				value = min;
+			}
+			if (value > max) {
+				value = max;
+			}
+			inputNumber.value = value;
+			gotoCount(value);
 		}
 	});
 		
