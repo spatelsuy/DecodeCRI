@@ -206,12 +206,14 @@ function gotoCount(index){
 	.then(resp_data => {
 		const data = JSON.stringify(resp_data);
 		const content = resp_data.status;
+		const client_ip = resp_data.connected_ip;
+		alert(client_ip);		
 		const classifiedStatus = document.getElementById("ds-classified_status");
 		if(content === "NOT_AVAILABLE"){
-			classifiedStatus.innerHTML = content;
+			classifiedStatus.innerHTML = content + " " + client_ip;
 		}
 		else{
-			classifiedStatus.innerHTML = content;
+			classifiedStatus.innerHTML = content + " " + client_ip;
 		}
 		return "SUCCESS";		
     })
@@ -253,12 +255,14 @@ function goToNextCri(){
 	.then(resp_data => {
 		const data = JSON.stringify(resp_data);
 		const content = resp_data.status;
+		const client_ip = resp_data.connected_ip;
+		alert(client_ip);		
 		const classifiedStatus = document.getElementById("ds-classified_status");
 		if(content === "NOT_AVAILABLE"){
-			classifiedStatus.innerHTML = content;
+			classifiedStatus.innerHTML = content + " " + client_ip;
 		}
 		else{
-			classifiedStatus.innerHTML = content;
+			classifiedStatus.innerHTML = content + " " + client_ip;
 		}
 		return "SUCCESS";		
     })
@@ -299,12 +303,14 @@ function goToPreviousCri(){
 	.then(resp_data => {
 		const data = JSON.stringify(resp_data);
 		const content = resp_data.status;
+		const client_ip = resp_data.connected_ip;
+		alert(client_ip);		
 		const classifiedStatus = document.getElementById("ds-classified_status");
 		if(content === "NOT_AVAILABLE"){
-			classifiedStatus.innerHTML = content;
+			classifiedStatus.innerHTML = content + " " + client_ip;
 		}
 		else{
-			classifiedStatus.innerHTML = content;
+			classifiedStatus.innerHTML = content + " " + client_ip;
 		}
 		return "SUCCESS";		
     })
@@ -1490,6 +1496,7 @@ function initCRI(criJson) {
 	.then(resp_data => {
 		const data = JSON.stringify(resp_data);
 		const content = resp_data.status;
+		
 		if(content === "NOT_AVAILABLE"){
 			classifiedStatus.innerHTML = content;
 		}
