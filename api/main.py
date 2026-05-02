@@ -9,6 +9,7 @@ import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Response
+from fastapi import Request
 
 from models import CRIDSGeneral, CRIState
 from graph import cri_ds_decodeClassify_runtime
@@ -158,26 +159,40 @@ def write_to_database(ds_id: str, state: CRIState) -> bool:
         return False
 
 
+def get_client_ip(request: Request):
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    
+    if x_forwarded_for:
+        # First IP = real client
+        return x_forwarded_for.split(",")[0].strip()
+    
+    # fallback (less reliable behind proxies)
+    return request.client.host
+
 # ----------------------------
 # AGENT MAIN ENTRYPOINT
 # ----------------------------
 
 @app.post("/is_ds_classified")
-def assess(request: CRIDSGeneral):
+def assess(request: Request, body: CRIDSGeneral):
     try:
-        cri_ds_data = yaml.safe_load(request.cri_ds_statement)
+        client_ip = get_client_ip(request)
+        print("CLIENT IP =", client_ip)
+        
+        cri_ds_data = yaml.safe_load(body.cri_ds_statement)
         print("\nCRI_DS_DATA=", cri_ds_data)
-        state = CRIState(cri_ds_statement = request.cri_ds_statement)
+        state = CRIState(cri_ds_statement = body.cri_ds_statement)
         result = read_from_database(cri_ds_data, state)
         if result == True:
             print("Data already exist in DB")
-            print("INTERPRITATION = ", state.cri_interpretation)
-            print("CLASSIFICATION = ", state.ds_classification)
-            print("VALIDATED CLASSIFICATION = ", state.ds_classification_validated)
+            #print("INTERPRITATION = ", state.cri_interpretation)
+            #print("CLASSIFICATION = ", state.ds_classification)
+            #print("VALIDATED CLASSIFICATION = ", state.ds_classification_validated)
             return JSONResponse({
                 "cri_interpretation": state.cri_interpretation, 
                 "ds_classification": state.ds_classification,
                 "cri_validated_classification": state.ds_classification_validated,
+                "connected_ip": client_ip,
                 "status":"Available"
             })
         else:
