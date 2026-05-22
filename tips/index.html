@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<title>AI Tips</title>
+
+<style>
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg:        #f5f5f3;
+    --surface:   #ffffff;
+    --border:    #e4e4e0;
+    --text:      #1a1a1a;
+    --muted:     #6b7280;
+    --hint:      #b0b0aa;
+    --accent:    #1a1a1a;
+    --info-bg:   #eff6ff;
+    --info-text: #2563eb;
+    --radius:    14px;
+    --radius-sm: 10px;
+}
+
+body{
+    background:var(--bg);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    padding:20px;
+}
+
+.frame{
+    width:100%;
+    max-width:360px;
+}
+
+.card{
+    background:var(--surface);
+    border:0.5px solid var(--border);
+    border-radius:var(--radius);
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+	touch-action:pan-y;
+	user-select:none;	
+}
+
+.meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.chip{
+    font-size:11px;
+    padding:4px 10px;
+    border-radius:99px;
+    border:0.5px solid var(--border);
+    color:var(--muted);
+}
+
+.chip-info{
+    background:var(--info-bg);
+    color:var(--info-text);
+    border:none;
+}
+
+.term{
+    font-size:20px;
+    font-weight:600;
+    color:var(--text);
+    line-height:1.2;
+}
+
+.rule{
+    border:none;
+    border-top:0.5px solid var(--border);
+}
+
+.label{
+    font-size:10px;
+    color:var(--hint);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:8px;
+}
+
+.def{
+    font-size:14px;
+    color:var(--text);
+    line-height:1.8;
+}
+
+.hint{
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.7;
+    border-left:2px solid var(--border);
+    padding-left:10px;
+}
+
+.ex-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+}
+
+.ex{
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.5;
+}
+
+.dot{
+    width:5px;
+    height:5px;
+    border-radius:50%;
+    background:var(--hint);
+    margin-top:7px;
+    flex-shrink:0;
+}
+
+.nav{
+    display:flex;
+    gap:10px;
+    margin-top:4px;
+}
+
+.btn{
+    border:none;
+    background:var(--accent);
+    color:white;
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    transition:opacity .15s;
+}
+
+.btn:hover{
+    opacity:.85;
+}
+
+.btn-icon{
+    width:48px;
+    height:44px;
+    font-size:18px;
+}
+
+.btn-next{
+    flex:1;
+    height:44px;
+    font-size:13px;
+    font-weight:500;
+}
+
+.counter{
+    text-align:center;
+    font-size:11px;
+    color:var(--hint);
+    margin-top:10px;
+}
+
+@media(max-width:768px){
+/* ================================
+   MOBILE OPTIMIZED CSS
+================================ */
+
+*, *::before, *::after{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+:root{
+    --bg:#f5f5f3;
+    --surface:#ffffff;
+    --border:#e5e7eb;
+    --text:#111827;
+    --muted:#6b7280;
+    --hint:#9ca3af;
+    --accent:#111827;
+    --info-bg:#eff6ff;
+    --info-text:#2563eb;
+
+    --radius:18px;
+    --radius-sm:12px;
+}
+
+/* ================================
+   PAGE
+================================ */
+
+body{
+    background:var(--bg);
+    min-height:100svh;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    padding:18px;
+}
+
+/* ================================
+   PHONE WIDTH
+================================ */
+
+.frame{
+    width:100%;
+    max-width:380px;
+}
+
+/* ================================
+   CARD
+================================ */
+
+.card{
+    background:var(--surface);
+
+    border:1px solid var(--border);
+
+    border-radius:var(--radius);
+
+    padding:22px;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:20px;
+
+    box-shadow:
+        0 2px 6px rgba(0,0,0,0.03),
+        0 10px 30px rgba(0,0,0,0.05);
+
+    animation:fadeIn .25s ease;
+}
+
+@keyframes fadeIn{
+    from{
+        opacity:0;
+        transform:translateY(8px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+/* ================================
+   TOP META
+================================ */
+
+.meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.chip{
+    font-size:11px;
+
+    padding:5px 10px;
+
+    border-radius:999px;
+
+    border:1px solid var(--border);
+
+    color:var(--muted);
+
+    background:#fff;
+}
+
+.chip-info{
+    background:var(--info-bg);
+    color:var(--info-text);
+    border:none;
+}
+
+/* ================================
+   TITLE
+================================ */
+
+.term{
+    font-size:30px;
+    font-weight:650;
+    line-height:1.2;
+    color:var(--text);
+
+    letter-spacing:-0.02em;
+}
+
+/* ================================
+   DIVIDER
+================================ */
+
+.rule{
+    border:none;
+    border-top:1px solid var(--border);
+}
+
+/* ================================
+   LABELS
+================================ */
+
+.label{
+    font-size:10px;
+
+    text-transform:uppercase;
+
+    letter-spacing:.12em;
+
+    color:var(--hint);
+
+    margin-bottom:8px;
+
+    font-weight:600;
+}
+
+/* ================================
+   DESCRIPTION
+================================ */
+
+.def{
+    font-size:15px;
+
+    line-height:1.85;
+
+    color:var(--text);
+}
+
+/* ================================
+   WHY USE
+================================ */
+
+.hint{
+    font-size:14px;
+
+    line-height:1.75;
+
+    color:var(--muted);
+
+    border-left:2px solid var(--border);
+
+    padding-left:12px;
+}
+
+/* ================================
+   USE CASES
+================================ */
+
+.ex-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.ex{
+    display:flex;
+    align-items:flex-start;
+
+    gap:10px;
+
+    font-size:14px;
+
+    line-height:1.6;
+
+    color:var(--muted);
+}
+
+.dot{
+    width:6px;
+    height:6px;
+
+    border-radius:50%;
+
+    background:var(--hint);
+
+    margin-top:8px;
+
+    flex-shrink:0;
+}
+
+/* ================================
+   BUTTONS
+================================ */
+
+.nav{
+    display:flex;
+    gap:12px;
+
+    margin-top:5px;
+}
+
+.btn{
+    border:none;
+
+    border-radius:var(--radius-sm);
+
+    background:var(--accent);
+
+    color:white;
+
+    cursor:pointer;
+
+    transition:.2s;
+}
+
+.btn:hover{
+    opacity:.88;
+}
+
+.btn:active{
+    transform:scale(.98);
+}
+
+/* LEFT BUTTON */
+
+.btn-icon{
+    width:54px;
+    height:48px;
+
+    font-size:18px;
+
+    flex-shrink:0;
+}
+
+/* RIGHT BUTTON */
+
+.btn-next{
+    flex:1;
+
+    height:48px;
+
+    font-size:14px;
+
+    font-weight:600;
+}
+
+/* ================================
+   FOOTER COUNTER
+================================ */
+
+.counter{
+    text-align:center;
+
+    margin-top:14px;
+
+    font-size:11px;
+
+    color:var(--hint);
+}
+
+/* ================================
+   SMALL MOBILE
+================================ */
+
+@media(max-width:420px){
+
+    .nav{
+        display:none;
+    }
+
+
+    body{
+        padding:14px;
+    }
+
+    .card{
+        padding:20px;
+    }
+
+    .term{
+        font-size:26px;
+    }
+
+    .def{
+        font-size:14px;
+    }
+
+    .hint{
+        font-size:13px;
+    }
+
+}
+
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="frame">
+
+    <div class="card">
+
+        <div>
+            <p class="term" id="keyword">Prompt Engineering</p>
+        </div>
+
+        <hr class="rule">
+
+        <div>
+            <p class="label">Description</p>
+
+            <p class="def" id="description">Writing optimized prompts to improve AI responses and output quality.</p>
+        </div>
+
+        <div>
+            <p class="label">Why to Use</p>
+
+            <p class="hint" id="whyUse">Helps generate more accurate, relevant, and consistent AI responses.</p>
+        </div>
+
+        <div>
+            <p class="label">Common Use Cases</p>
+
+            <div class="ex-wrap" id="useCases">
+
+                <div class="ex">
+                    <span class="dot"></span>
+                    ChatGPT prompts
+                </div>
+            </div>
+        </div>
+
+        <div class="nav">
+
+            <button class="btn btn-icon" onclick="previousTip()">
+                ←
+            </button>
+
+            <button class="btn btn-next" onclick="nextTip()">
+                Next Tip →
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="counter" id="counterBottom">
+        Card 1
+    </div>
+
+</div>
+
+<script>
+
+let tipsData = [];
+let currentIndex = 0;
+
+/* Load Excel on page load */
+window.onload = async function () {
+    await loadExcel();
+    displayTip(currentIndex);
+};
+
+async function loadExcel() {
+
+    const fileName = "TipsAI.xlsx";
+
+    const response = await fetch(fileName);
+    const arrayBuffer = await response.arrayBuffer();
+
+    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+
+    const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+    /*
+      Convert Excel rows → clean JS object array
+    */
+    tipsData = jsonData.map(row => ({
+        "ID": row["ID"],
+        "AIKeyword": row["AIKeyword"],
+        "Description": row["Description"],
+        "WhytoUse": row["WhytoUse"],
+        "CommonUseCase": row["CommonUseCase"]
+    }));
+
+    console.log("Loaded tipsData:", tipsData);
+}
+
+
+function displayTip(index){
+
+    const tip = tipsData[index];
+
+    //document.getElementById('tipNo').innerText = 'Tip #' + tip['ID'];
+
+    //document.getElementById('counterTop').innerText = (index + 1) + ' / ' + tipsData.length;
+
+    document.getElementById('counterBottom').innerText ='Card ' + (index + 1);
+
+    document.getElementById('keyword').innerText = tip['AIKeyword'];
+
+    document.getElementById('description').innerText = tip['Description'];
+
+    document.getElementById('whyUse').innerText = tip['WhytoUse'];
+
+    const useCases = tip['CommonUseCase'].split('\n');
+
+    document.getElementById('useCases').innerHTML =
+        useCases.map(item => `
+            <div class="ex">
+                ${item.trim()}
+            </div>
+        `).join('');
+}
+
+function nextTip(){
+
+    currentIndex++;
+
+    if(currentIndex >= tipsData.length){
+        currentIndex = 0;
+    }
+
+    displayTip(currentIndex);
+}
+
+function previousTip(){
+
+    currentIndex--;
+
+    if(currentIndex < 0){
+        currentIndex = tipsData.length - 1;
+    }
+
+    displayTip(currentIndex);
+}
+
+/* =========================
+   MOBILE SWIPE SUPPORT
+========================= */
+
+let touchStartX = 0;
+let touchEndX = 0;
+
+const card = document.querySelector('.card');
+
+card.addEventListener('touchstart', (e) => {
+
+    touchStartX = e.changedTouches[0].screenX;
+
+}, { passive:true });
+
+card.addEventListener('touchend', (e) => {
+
+    touchEndX = e.changedTouches[0].screenX;
+
+    handleSwipe();
+
+}, { passive:true });
+
+function handleSwipe(){
+
+    const swipeDistance = touchEndX - touchStartX;
+
+    /*
+        Swipe Right
+    */
+    if(swipeDistance > 60){
+
+        previousTip();
+    }
+
+    /*
+        Swipe Left
+    */
+    if(swipeDistance < -60){
+
+        nextTip();
+    }
+}
+
+
+</script>
+
+</body>
+</html>
