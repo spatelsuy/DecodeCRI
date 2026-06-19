@@ -254,8 +254,7 @@ function goToNextCri(){
 	.then(resp_data => {
 		const data = JSON.stringify(resp_data);
 		const content = resp_data.status;
-		const client_ip = resp_data.connected_ip;
-		alert(client_ip);		
+		const client_ip = resp_data.connected_ip;		
 		const classifiedStatus = document.getElementById("ds-classified_status");
 		if(content === "NOT_AVAILABLE"){
 			classifiedStatus.innerHTML = content + " " + client_ip;
@@ -302,8 +301,7 @@ function goToPreviousCri(){
 	.then(resp_data => {
 		const data = JSON.stringify(resp_data);
 		const content = resp_data.status;
-		const client_ip = resp_data.connected_ip;
-		alert(client_ip);		
+		const client_ip = resp_data.connected_ip;	
 		const classifiedStatus = document.getElementById("ds-classified_status");
 		if(content === "NOT_AVAILABLE"){
 			classifiedStatus.innerHTML = content + " " + client_ip;
