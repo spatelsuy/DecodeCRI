@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Response
 from fastapi import Request
 
-from models import CRIDSGeneral, CRIState
+from models import CRIDSGeneral, CRIState, A2TGeneral
 from graph import cri_ds_decodeClassify_runtime
 
 from session_store import SESSION_STORE
@@ -48,6 +48,20 @@ supabase: Client = create_client(url, key)
 # ----------------------------
 # AGENT MAIN ENTRYPOINT
 # ----------------------------
+
+@app.post("/a2t/transcribe")
+def assess(request: Request, body: A2TGeneral):
+    try:
+        client_ip = get_client_ip(request)
+        print("CLIENT IP A2T =", client_ip)
+                 
+    except Exception as e:
+        print("Error in getting A2T Data\n", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
     
 @app.get("/health_a2t")
 def health():
