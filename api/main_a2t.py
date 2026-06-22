@@ -41,7 +41,17 @@ supabase: Client = create_client(url, key)
 # ----------------------------
 # AGENT MAIN ENTRYPOINT
 # ----------------------------
-    
+
+@app.post("/a2t/transcribe")
+def assess(request: Request, body: CRIDSGeneral):
+    try:
+        print("SUCCESS A2T")
+    except Exception as e:
+        print("Error in getting At2 work\n", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.get("/health_a2t")
 def health():
     return {
