@@ -1,7 +1,10 @@
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-
+class A2TGeneral(BaseModel):
+    user_name: str
+    audio_data: str
+    
 class CRIDSGeneral(BaseModel):
     user_name: str
     cri_ds_statement: str  # YAML string
