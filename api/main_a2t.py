@@ -43,7 +43,7 @@ supabase: Client = create_client(url, key)
 # ----------------------------
 
 @app.post("/a2t/transcribe")
-def assess(request: Request, body: CRIDSGeneral):
+def assess(body: A2TGeneral):
     try:
         print("SUCCESS A2T")
     except Exception as e:
