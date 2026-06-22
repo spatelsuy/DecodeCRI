@@ -50,3 +50,11 @@ def health():
         "pattern": "Manager–Worker + Planner–Executor",
         "engine": "LangGraph"
     }
+
+@app.get("/a2t/health_a2t")
+def health():
+    return {
+        "status": "healthy_a2t",
+        "pattern": "Manager–Worker + Planner–Executor",
+        "engine": "LangGraph"
+    }
