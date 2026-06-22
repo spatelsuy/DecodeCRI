@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/a2t/transcribe",
+      "destination": "/api/a2tmain.py"
+    },    
+    {
       "source": "/(.*)",
       "destination": "/api/main_cri.py"
     }
