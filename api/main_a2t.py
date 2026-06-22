@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.dirname(__file__))
 
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Response
 from fastapi import Request
@@ -50,16 +50,13 @@ supabase: Client = create_client(url, key)
 # ----------------------------
 
 @app.post("/a2t/transcribe")
-def assess(request: Request, body: A2TGeneral):
-    try:
-        client_ip = get_client_ip(request)
-        print("CLIENT IP A2T =", client_ip)
-                 
-    except Exception as e:
-        print("Error in getting A2T Data\n", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
-
-
+def transcribe_audio(
+    user_name: str = Form(...),      # Reads form text
+    file: UploadFile = File(...)     # Reads the raw webm file binary
+):
+    # Your transcription code here
+    print("CLIENT =", user_name)
+    return {"status": "success", "user": user_name}
 
 
     
