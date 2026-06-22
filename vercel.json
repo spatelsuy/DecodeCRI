@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/a2t/transcribe",
-      "destination": "/api/a2tmain.py"
+      "destination": "/api/main_a2t.py"
     },    
     {
       "source": "/(.*)",
