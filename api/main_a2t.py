@@ -11,11 +11,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Response
 from fastapi import Request
 
-from models A2TGeneral
+from models import CRIDSGeneral, CRIState
+from graph import cri_ds_decodeClassify_runtime
 
+from session_store import SESSION_STORE
+
+from typing import Dict, List, Any, Optional
+from statistics import mean
+import math
 from fastapi.responses import JSONResponse
 import re
 import json
+
 
 app = FastAPI(title="IAM Agentic Maturity Platform")
 
@@ -41,17 +48,7 @@ supabase: Client = create_client(url, key)
 # ----------------------------
 # AGENT MAIN ENTRYPOINT
 # ----------------------------
-
-@app.post("/a2t/transcribe")
-def assess(body: A2TGeneral):
-    try:
-        print("SUCCESS A2T")
-    except Exception as e:
-        print("Error in getting At2 work\n", str(e))
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
+    
 @app.get("/health_a2t")
 def health():
     return {
