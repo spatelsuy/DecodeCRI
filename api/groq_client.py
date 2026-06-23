@@ -55,36 +55,27 @@ def call_groq(system_prompt: str, user_payload: Dict[str, Any], model="llama-3.1
 
 
 # The endpoint for Groq's transcriptions follows the OpenAI structure
-GROQ_TRANSCRIPTION_URL = "https://groq.com"
+GROQ_TRANSCRIPTION_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 
 def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", model: str = "whisper-large-v3") -> str:
-    # 1. Fetch your custom environment key name
     GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
     if not GROQ_API_KEY:
         raise RuntimeError("PROMPT_GROQ_KEY not found in environment variables")
-        
-    print("\nTRANSCRIPTION MODEL === ", model)
 
-    # 2. FormData non-file parameters go into 'data'
+    print("\nTRANSCRIPTION MODEL === ", model)
     data = {
         "model": model,
         "temperature": "0.0", # Groq expects a string or float representation
         "response_format": "json"
     }
 
-    # 3. Form-Data raw files go into 'files' mapping
-    # Format: (filename, binary_content, content_type)
     files = {
         "file": (file_name, file_bytes, "audio/webm")
     }
-
-    # 4. Set Headers: DO NOT add "Content-Type" manually here.
-    # The requests library dynamically sets multi-part boundaries when 'files' is injected.
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}"
     }
 
-    # 5. Make the Multi-part POST request
     response = requests.post(
         GROQ_TRANSCRIPTION_URL,
         headers=headers,
@@ -96,6 +87,9 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
     if response.status_code != 200:
         raise Exception(f"Groq Transcription API error: {response.text}")
 
-    # 6. Parse and return the plain text transcript string
     result = response.json()
     return result.get("text", "").strip()
+
+
+
+
