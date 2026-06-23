@@ -50,7 +50,7 @@ supabase: Client = create_client(url, key)
 # ----------------------------
 
 @app.post("/a2t/transcribe")
-def transcribe_audio(
+async def transcribe_audio(
     user_name: str = Form(...),      # Reads form text
     file: UploadFile = File(...)     # Reads the raw webm file binary
 ):
