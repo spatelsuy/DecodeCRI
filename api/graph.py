@@ -3,6 +3,7 @@ from models import CRIState
 
 from agents.cri_agents import validate_input_agent
 from agents.cri_agents import get_ds_decode, get_ds_classify, get_ds_validate_classify, generate_code_classification, apply_hard_rules, guard_hard_rule_reversals
+from agents.a2t_agents import transcribe_audio_text, categorize_text
 
 # ----------------------------
 # BUILD AGENT WORKFLOW
@@ -26,3 +27,16 @@ cri_decodeclassify_graph.add_edge("classify", "apply_hard_rules")
 cri_decodeclassify_graph.add_edge("apply_hard_rules", "validate_classify")
 cri_decodeclassify_graph.add_edge("validate_classify", "guard_hard_rule_reversals")
 cri_ds_decodeClassify_runtime = cri_decodeclassify_graph.compile()
+
+
+
+
+workflow_a2t = StateGraph(AudioProcessingState)
+
+# Add our two structural nodes
+workflow_a2t.add_node("transcribe_audio_text", transcribe_audio_text)
+workflow_a2t.add_node("categorize_text", categorize_text)
+
+# Establish the sequential dependency pipeline
+workflow_a2t.set_entry_point("transcribe_audio_text")
+workflow_a2t.add_edge("transcribe_audio_text", "categorize_text")
