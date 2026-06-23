@@ -59,7 +59,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         analysis_result = call_groq(
             system_prompt=system_prompt,
             user_payload=user_payload,
-            model="llama-3.1-70b-versatile"
+            model="openai/gpt-oss-120b"
         )
         
         # This will be a standard Python dictionary containing the organized structure
