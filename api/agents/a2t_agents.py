@@ -3,27 +3,22 @@ import yaml
 import time
 from typing import Dict, Any
 from models import AudioProcessingState
-from groq_client import call_groq
+from groq_client import call_groq, call_groq_transcribe
 
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
-    """Node 1: Takes raw bytes and extracts text using Whisper via Groq Client"""
-    print(f"--- Node 1: Transcribing audio for {state['user_name']} ---")
+    print(f"--- Node 1: Transcribing via Raw Requests for {state['user_name']} ---")
     
     try:
-        client = Groq() # Reads GROQ_API_KEY from environment
-        
-        # Call Groq's Whisper API using the raw bytes from the state
-        transcription = client.audio.transcriptions.create(
-            model="whisper-large-v3",
-            file=(state["file_name"], state["file_bytes"])
+        # Call the new direct request function
+        text_output = call_groq_transcribe(
+            file_bytes=state["file_bytes"],
+            file_name=state["file_name"]
         )
-        
-        # Return updates to save into the state
-        return {"transcription_text": transcription.text}
+        return {"transcription_text": text_output}
         
     except Exception as e:
-        print(f"Transcription Node Error: {e}")
+        print(f"Transcription Error: {e}")
         return {"transcription_text": f"Error during transcription: {str(e)}"}
 
 
