@@ -40,3 +40,5 @@ workflow_a2t.add_node("categorize_text", categorize_text)
 # Establish the sequential dependency pipeline
 workflow_a2t.set_entry_point("transcribe_audio_text")
 workflow_a2t.add_edge("transcribe_audio_text", "categorize_text")
+
+workflow_a2t_runtime = workflow_a2t.compile()
