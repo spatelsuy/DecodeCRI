@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Response
 from fastapi import Request
 
-from models import CRIDSGeneral, CRIState, A2TGeneral
+from models import CRIDSGeneral, CRIState, A2TGeneral, AudioProcessingState
 from graph import cri_ds_decodeClassify_runtime
 
 from session_store import SESSION_STORE
@@ -56,6 +56,33 @@ def transcribe_audio(
 ):
     # Your transcription code here
     print("CLIENT =", user_name)
+    
+    try:
+        audio_content = await file.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not read upload file: {str(e)}")
+    initial_state: AudioProcessingState = {
+        "user_name": user_name,
+        "file_bytes": audio_content,
+        "file_name": file.filename or "recording.webm",
+        "transcription_text": None,
+        "categorization_json": None
+    }    
+    try:
+        # 3. Synchronously invoke the LangGraph pipeline
+        # .invoke() processes all node edges sequentially and returns the final updated state dictionary
+        final_state = graph_app.invoke(initial_state)
+        
+        # 4. Extract outputs from the final state dictionary and pass to frontend JSON
+        return {
+            "status": "success",
+            "user": final_state.get("user_name"),
+            "transcription": final_state.get("transcription_text"),
+            "analysis": final_state.get("categorization_json")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Graph Execution Failed: {str(e)}")
+    
     return {"status": "success", "user": user_name}
 
 
