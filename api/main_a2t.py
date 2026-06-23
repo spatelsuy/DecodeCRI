@@ -12,7 +12,7 @@ from fastapi import Response
 from fastapi import Request
 
 from models import CRIDSGeneral, CRIState, A2TGeneral, AudioProcessingState
-from graph import cri_ds_decodeClassify_runtime
+from graph import workflow_a2t_runtime
 
 from session_store import SESSION_STORE
 
@@ -73,7 +73,7 @@ async def transcribe_audio(
         # 3. Synchronously invoke the LangGraph pipeline
         # .invoke() processes all node edges sequentially and returns the final updated state dictionary
         print("INVOKING A2T GRAPH")
-        final_state = graph_app.invoke(initial_state)
+        final_state = workflow_a2t_runtime.invoke(initial_state)
         print("INVOKED A2T GRAPH")
         # 4. Extract outputs from the final state dictionary and pass to frontend JSON
         return {
