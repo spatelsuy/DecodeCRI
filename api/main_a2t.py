@@ -67,12 +67,14 @@ async def transcribe_audio(
         "file_name": file.filename or "recording.webm",
         "transcription_text": None,
         "categorization_json": None
-    }    
+    }
+    print("Filename =", initial_state.get("file_name"))
     try:
         # 3. Synchronously invoke the LangGraph pipeline
         # .invoke() processes all node edges sequentially and returns the final updated state dictionary
+        print("INVOKING A2T GRAPH")
         final_state = graph_app.invoke(initial_state)
-        
+        print("INVOKED A2T GRAPH")
         # 4. Extract outputs from the final state dictionary and pass to frontend JSON
         return {
             "status": "success",
