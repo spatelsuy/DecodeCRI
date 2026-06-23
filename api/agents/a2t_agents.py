@@ -23,27 +23,48 @@ def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
 
 
 def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
-    """Node 2: Takes the text string and uses an LLM to build structured JSON"""
-    print("--- Node 2: Categorizing text content ---")
+    """Node 2: Extracts scheduling details and tasks from the transcript
+    using the existing call_groq utility.
+    """
+    print("--- Node 2: Parsing activity schedule using call_groq ---")
     
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
-        return {"categorization_json": {"error": "No valid text to categorize"}}
+        return {"categorization_json": {"error": "No valid text to analyze"}}
         
+    # Craft a strict system prompt that instructs the LLM to output YAML
+    # that your call_groq function can parse into a structured dictionary.
+    system_prompt = (
+        "You are an expert personal organizer and scheduling AI assistant.\n"
+        "Analyze the user speech transcript to extract all past, present, and future tasks.\n"
+        "Your response must be exclusively formatted as a valid YAML block.\n"
+        "Do not include any chat formatting, introductory text, or markdown outside the block.\n\n"
+        "The YAML structure must match this exact blueprint schema:\n"
+        "summary: A brief high-level description of the user's update.\n"
+        "primary_mood: The emotional tone of the speaker (e.g., Busy, Stressed, Relaxed, Productive).\n"
+        "activities:\n"
+        "  - task: Description of the specific action or event.\n"
+        "    timeframe: When this occurs (e.g., Tomorrow, Today, Over the weekend, Next week).\n"
+        "    category: The domain of the task (e.g., Healthcare, Family, Social, Work, Personal).\n"
+        "    is_future: True if it is an upcoming reminder, False if it is a completed past event.\n"
+        "    priority: Priority level based on urgency (High, Medium, Low).\n"
+    )
+    
+    user_payload = {
+        "user_speech_transcript": text_to_analyze
+    }
+    
     try:
-        # Initialize an LLM model capable of tool calling/structured outputs
-        llm = ChatGroq(model="llama3-70b-8192", temperature=0)
+        # Call your existing function using a smart, large context model
+        analysis_result = call_groq(
+            system_prompt=system_prompt,
+            user_payload=user_payload,
+            model="llama-3.1-70b-versatile"
+        )
         
-        # Bind the Pydantic model to force the LLM to output perfect structured JSON
-        structured_llm = llm.with_structured_output(TextCategorization)
-        
-        # Run the structured analysis
-        prompt = f"Analyze the following transcribed user speech text: '{text_to_analyze}'"
-        result: TextCategorization = structured_llm.invoke(prompt)
-        
-        # Convert the Pydantic model response directly into a dictionary for the state
-        return {"categorization_json": result.model_dump()}
+        # This will be a standard Python dictionary containing the organized structure
+        return {"categorization_json": analysis_result}
         
     except Exception as e:
         print(f"Categorization Node Error: {e}")
-        return {"categorization_json": {"error": f"LLM categorization failed: {str(e)}"}}
+        return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
