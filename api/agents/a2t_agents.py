@@ -15,8 +15,7 @@ Your task is to extract and categorize information into:
 1. tasks       – things the user needs to do (no fixed time)
 2. events      – scheduled activities with a time or date
 3. reminders   – time-bound alerts or deadlines
-4. shopping    – items or gifts to buy
-5. notes       – background context, not directly actionable
+4. notes       – background context, not directly actionable
 
 Instructions:
 - Break input into meaningful individual items.
