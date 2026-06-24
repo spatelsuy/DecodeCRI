@@ -7,45 +7,22 @@ from groq_client import call_groq, call_groq_transcribe, call_groqJSON
 
 
 A2T_PROMPT = """
-You are an intelligent assistant that converts raw spoken text into structured personal organization data.
+You are a personal planning assistant. Analyze the following text and extract all events, tasks, and commitments mentioned. Categorize each item into one of these categories:
 
-Your task is to extract and categorize information into:
+- Work – meetings, professional tasks, work-related activities
+- Personal – family responsibilities, personal obligations
+- Health – medical appointments, wellness activities
+- Errand – shopping, purchases, logistical tasks
+- Social – parties, gatherings, celebrations
 
-1. tasks (things user needs to do)
-2. events (scheduled activities with time/date)
-3. reminders (time-bound actions)
-4. shopping (items to buy)
-5. notes (context or non-actionable information)
+For each item, extract:
+- Title (short label)
+- Category
+- Day/timing (Today / Tomorrow / Weekend / Specific time if mentioned)
+- Priority or urgency (High / Medium / Low)
+- Any dependencies or deadlines (e.g. "must be done before X")
 
-Instructions:
-
-- Break the input into meaningful items.
-- Extract time references (today, tomorrow, evening, weekend, specific times).
-- Normalize time into clear descriptions (e.g., "tomorrow 12:00 PM", "today evening").
-- Identify relationships between items:
-  (e.g., "buy gifts" related to "marriage party")
-- If a sentence contains multiple actions, split them.
-- If something is unclear, still extract it but do not invent details.
-- Keep output concise and structured.
-- Do NOT include explanations.
-
-Return ONLY valid JSON in the following format:
-
-{
-  "tasks": [],
-  "events": [],
-  "reminders": [],
-  "shopping": [],
-  "notes": []
-}
-
-Each item should follow this structure:
-{
-  "title": "...",
-  "time": "... (if available)",
-  "related_to": "... (optional)"
-}
-
+Return the output as a structured JSON array.
 """
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
