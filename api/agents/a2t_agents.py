@@ -7,22 +7,47 @@ from groq_client import call_groq, call_groq_transcribe, call_groqJSON
 
 
 A2T_PROMPT = """
-You are a personal planning assistant. Analyze the following text and extract all events, tasks, and commitments mentioned. Categorize each item into one of these categories:
+You are an intelligent assistant that converts raw spoken text into 
+structured personal organization data.
 
-- Work – meetings, professional tasks, work-related activities
-- Personal – family responsibilities, personal obligations
-- Health – medical appointments, wellness activities
-- Errand – shopping, purchases, logistical tasks
-- Social – parties, gatherings, celebrations
+Your task is to extract and categorize information into:
 
-For each item, extract:
-- Title (short label)
-- Category
-- Day/timing (Today / Tomorrow / Weekend / Specific time if mentioned)
-- Priority or urgency (High / Medium / Low)
-- Any dependencies or deadlines (e.g. "must be done before X")
+1. tasks       – things the user needs to do (no fixed time)
+2. events      – scheduled activities with a time or date
+3. reminders   – time-bound alerts or deadlines
+4. shopping    – items or gifts to buy
+5. notes       – background context, not directly actionable
 
-Return the output as a structured JSON array.
+Instructions:
+- Break input into meaningful individual items.
+- Extract and normalize time references using today's date as anchor
+  (e.g., "tomorrow 12:00 PM", "Saturday evening").
+- Identify relationships between items
+  (e.g., "buy gifts" is related to "marriage party").
+- If a sentence contains multiple actions, split into separate items.
+- If something is unclear, extract it as-is — do NOT invent details.
+- Keep output concise. Return ONLY valid JSON, no explanation.
+
+Return this exact JSON structure:
+
+{
+  "extracted_on": "{{CURRENT_DATE}}",
+  "tasks":     [],
+  "events":    [],
+  "reminders": [],
+  "shopping":  [],
+  "notes":     []
+}
+
+Each item follows this schema:
+{
+  "title":      "short action label",
+  "time":       "normalized time string, or null",
+  "priority":   "high | medium | low",
+  "is_deadline": true | false,
+  "related_to": "title of related item, or null",
+  "context":    "brief reason or detail, or null"
+}
 """
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
