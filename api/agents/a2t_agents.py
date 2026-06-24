@@ -3,8 +3,7 @@ import yaml
 import time
 from typing import Dict, Any
 from models import AudioProcessingState
-from groq_client import call_groq, call_groq_transcribe
-
+from groq_client import call_groq, call_groq_transcribe, call_groqJSON
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
     print(f"--- Node 1: Transcribing via Raw Requests for {state['user_name']} ---")
@@ -56,7 +55,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     
     try:
         # Call your existing function using a smart, large context model
-        analysis_result = call_groq(
+        analysis_result = call_groqJSON(
             system_prompt=system_prompt,
             user_payload=user_payload,
             model="openai/gpt-oss-120b"
