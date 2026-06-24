@@ -10,6 +10,8 @@ A2T_PROMPT = """
 You are an intelligent assistant that converts raw spoken text into 
 structured personal organization data.
 
+Today's date is: 23-Jun-2026
+
 Your task is to extract and categorize information into:
 
 1. tasks       – things the user needs to do (no fixed time)
