@@ -5,6 +5,49 @@ from typing import Dict, Any
 from models import AudioProcessingState
 from groq_client import call_groq, call_groq_transcribe, call_groqJSON
 
+
+A2T_PROMPT = """
+You are an intelligent assistant that converts raw spoken text into structured personal organization data.
+
+Your task is to extract and categorize information into:
+
+1. tasks (things user needs to do)
+2. events (scheduled activities with time/date)
+3. reminders (time-bound actions)
+4. shopping (items to buy)
+5. notes (context or non-actionable information)
+
+Instructions:
+
+- Break the input into meaningful items.
+- Extract time references (today, tomorrow, evening, weekend, specific times).
+- Normalize time into clear descriptions (e.g., "tomorrow 12:00 PM", "today evening").
+- Identify relationships between items:
+  (e.g., "buy gifts" related to "marriage party")
+- If a sentence contains multiple actions, split them.
+- If something is unclear, still extract it but do not invent details.
+- Keep output concise and structured.
+- Do NOT include explanations.
+
+Return ONLY valid JSON in the following format:
+
+{
+  "tasks": [],
+  "events": [],
+  "reminders": [],
+  "shopping": [],
+  "notes": []
+}
+
+Each item should follow this structure:
+{
+  "title": "...",
+  "time": "... (if available)",
+  "related_to": "... (optional)"
+}
+
+"""
+
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
     print(f"--- Node 1: Transcribing via Raw Requests for {state['user_name']} ---")
     
@@ -30,24 +73,6 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
-        
-    # Craft a strict system prompt that instructs the LLM to output YAML
-    # that your call_groq function can parse into a structured dictionary.
-    system_prompt = (
-        "You are an expert personal organizer and scheduling AI assistant.\n"
-        "Analyze the user speech transcript to extract all past, present, and future tasks.\n"
-        "Your response must be exclusively formatted as a valid YAML block.\n"
-        "Do not include any chat formatting, introductory text, or markdown outside the block.\n\n"
-        "The YAML structure must match this exact blueprint schema:\n"
-        "summary: A brief high-level description of the user's update.\n"
-        "primary_mood: The emotional tone of the speaker (e.g., Busy, Stressed, Relaxed, Productive).\n"
-        "activities:\n"
-        "  - task: Description of the specific action or event.\n"
-        "    timeframe: When this occurs (e.g., Tomorrow, Today, Over the weekend, Next week).\n"
-        "    category: The domain of the task (e.g., Healthcare, Family, Social, Work, Personal).\n"
-        "    is_future: True if it is an upcoming reminder, False if it is a completed past event.\n"
-        "    priority: Priority level based on urgency (High, Medium, Low).\n"
-    )
     
     user_payload = {
         "user_speech_transcript": text_to_analyze
@@ -56,7 +81,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     try:
         # Call your existing function using a smart, large context model
         analysis_result = call_groqJSON(
-            system_prompt=system_prompt,
+            system_prompt=A2T_PROMPT,
             user_payload=user_payload,
             model="openai/gpt-oss-120b"
         )
