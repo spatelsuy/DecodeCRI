@@ -85,7 +85,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     try:
       # Call your existing function using a smart, large context model
       today_date = datetime.today().strftime('%Y-%m-%d')
-      final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', today_str)
+      final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', today_date)
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
         user_payload=user_payload,
