@@ -1,6 +1,7 @@
 
 import yaml
 import time
+from datetime import datetime
 from typing import Dict, Any
 from models import AudioProcessingState
 from groq_client import call_groq, call_groq_transcribe, call_groqJSON
@@ -21,7 +22,7 @@ Your task is to extract and categorize information into:
 
 Instructions:
 - Break input into meaningful individual items.
-- Extract and normalize time references using today's date as anchor
+- Extract and normalize time references using today's date as anchor. Today's date format is YYYY-MM-DD.
   (e.g., "tomorrow 12:00 PM", "Saturday evening").
 - Identify relationships between items
   (e.g., "buy gifts" is related to "marriage party").
@@ -82,16 +83,17 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     }
     
     try:
-        # Call your existing function using a smart, large context model
-        analysis_result = call_groqJSON(
-            system_prompt=A2T_PROMPT,
-            user_payload=user_payload,
-            model="openai/gpt-oss-120b"
-        )
-        
-        # This will be a standard Python dictionary containing the organized structure
-        return {"categorization_json": analysis_result}
+      # Call your existing function using a smart, large context model
+      today_date = datetime.today().strftime('%Y-%m-%d')
+      final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', today_str)
+      analysis_result = call_groqJSON(
+        system_prompt=final_prompt,
+        user_payload=user_payload,
+        model="openai/gpt-oss-120b"
+      )
+      # This will be a standard Python dictionary containing the organized structure
+      return {"categorization_json": analysis_result}
         
     except Exception as e:
-        print(f"Categorization Node Error: {e}")
-        return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
+      print(f"Categorization Node Error: {e}")
+      return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
