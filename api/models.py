@@ -3,11 +3,13 @@ from typing import List, Dict, Any, TypedDict, Optional
 
 class A2TGeneral(BaseModel):
     user_name: str
+    client_time: str
     audio_data: str
 
 class AudioProcessingState(TypedDict):
     # Inputs
     user_name: str
+    client_time: str
     file_bytes: bytes
     file_name: str
     
