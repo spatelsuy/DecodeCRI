@@ -52,6 +52,7 @@ supabase: Client = create_client(url, key)
 @app.post("/a2t/transcribe")
 async def transcribe_audio(
     user_name: str = Form(...),      # Reads form text
+    client_time: str = Form(...),
     file: UploadFile = File(...)     # Reads the raw webm file binary
 ):
     # Your transcription code here
@@ -63,6 +64,7 @@ async def transcribe_audio(
         raise HTTPException(status_code=400, detail=f"Could not read upload file: {str(e)}")
     initial_state: AudioProcessingState = {
         "user_name": user_name,
+        "client_time": client_time,
         "file_bytes": audio_content,
         "file_name": file.filename or "recording.webm",
         "transcription_text": None,
