@@ -36,14 +36,26 @@ Return this exact JSON structure:
   "notes":     []
 }
 
-Each item follows this schema:
+For "tasks" and "events", use this schema:
 {
-  "title":      "short action label",
-  "time":       "normalized time string, or null",
-  "priority":   "high | medium | low",
-  "is_deadline": true | false,
+  "title": "short action label or meeting name",
+  "time": "normalized ISO-8601 string, or null",
+  "priority": "high | medium | low",
   "related_to": "title of related item, or null",
-  "context":    "brief reason or detail, or null"
+  "context": "brief reason or detail, or null"
+}
+
+For "reminders", use this distinct schema to prevent generic placeholders:
+{
+  "reminder_action": "The text or task the user needs to be alerted about",
+  "trigger_time": "normalized ISO-8601 string",
+  "related_to": "title of the parent task/event this reminder alerts for, or null"
+}
+
+For "notes", use this schema:
+{
+  "content": "The text of the note or context background",
+  "related_to": "title of the task or event this note supports, or null"
 }
 """
 
