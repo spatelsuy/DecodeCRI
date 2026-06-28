@@ -72,7 +72,7 @@ async def transcribe_text(
         # .invoke() processes all node edges sequentially and returns the final updated state dictionary
         print("INVOKING T2J GRAPH")
         final_state = workflow_t2j_runtime.invoke(initial_state)
-        print("INVOKED T2J GRAPH")
+        print("ANALYSIS is = ", final_state.get("categorization_json"))
         # 4. Extract outputs from the final state dictionary and pass to frontend JSON
         return {
             "status": "success",
