@@ -49,7 +49,7 @@ workflow_t2j = StateGraph(AudioProcessingState)
 workflow_t2j.add_node("categorize_text", categorize_text)
 
 # Establish the sequential dependency pipeline
-workflow_a2t.set_entry_point("categorize_text")
+workflow_t2j.set_entry_point("categorize_text")
 
 workflow_t2j_runtime = workflow_t2j.compile()
 
