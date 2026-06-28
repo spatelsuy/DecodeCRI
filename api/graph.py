@@ -4,7 +4,7 @@ from models import AudioProcessingState
 
 from agents.cri_agents import validate_input_agent
 from agents.cri_agents import get_ds_decode, get_ds_classify, get_ds_validate_classify, generate_code_classification, apply_hard_rules, guard_hard_rule_reversals
-from agents.a2t_agents import transcribe_audio_text, categorize_text
+from agents.a2t_agents import transcribe_audio_text, categorize_text, categorize_validation
 
 # ----------------------------
 # BUILD AGENT WORKFLOW
@@ -47,9 +47,11 @@ workflow_a2t_runtime = workflow_a2t.compile()
 
 workflow_t2j = StateGraph(AudioProcessingState)
 workflow_t2j.add_node("categorize_text", categorize_text)
+workflow_t2j.add_node("categorize_validation", categorize_validation)
 
 # Establish the sequential dependency pipeline
 workflow_t2j.set_entry_point("categorize_text")
+workflow_t2j.add_edge("categorize_text", "categorize_validation")
 
 workflow_t2j_runtime = workflow_t2j.compile()
 
