@@ -87,7 +87,8 @@ Schema for tasks, events, reminders:
   "priority": "high | medium | low",
   "is_deadline": true | false,
   "related_to": "exact title of related item or null",
-  "context": "brief supporting detail or null"
+  "context": "brief supporting detail or null",
+  "source_segment": "The exact verbatim phrase or substring from the raw text that triggered this item."
 }
 
 Schema for notes:
@@ -97,7 +98,8 @@ Schema for notes:
   "priority": "low",
   "is_deadline": false,
   "related_to": "exact title of related item or null",
-  "context": "full note detail"
+  "context": "full note detail",
+  "source_segment": "The exact verbatim phrase or substring from the raw text that triggered this note."
 }
 
 Titles must be concise and intent-driven. Preserve the user's real meaning. Store supporting detail in context or notes, not in the title.
@@ -120,11 +122,13 @@ AUDIT CHECKLIST:
 1. MISSING DATA: Compare "user_speech_transcript" to "extracted_json". Are there any tasks, events, or reminders present in the transcript that were left out of the JSON? If so, add them.
 2. INVALID COPIES: Look inside "extracted_json". Did the first pass create redundant duplicates (e.g., creating an entry under 'notes' for details already explained inside a task)? If so, clean them up.
 3. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}" and "{{CURRENT_DAY_OF_WEEK}}". Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
+4. SOURCE VERIFICATION: Check the "source_segment" field. Ensure the text snippet inside it actually exists word-for-word in the "user_speech_transcript". If you modify an item's date or time during this audit, ensure the "source_segment" still reflects the text that provided that context.
 
 OUTPUT INSTRUCTIONS:
-Fix any errors found during the audit. 
-Output ONLY the finalized, repaired, and structurally valid JSON object matching the original schema. 
+Fix any errors found during the audit.
+Output ONLY the finalized, repaired, and structurally valid JSON object matching the schema (including the "source_segment" field). 
 Do not include markdown formatting, backticks, or any conversational text.
+
 """
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
