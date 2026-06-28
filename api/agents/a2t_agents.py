@@ -8,36 +8,31 @@ from groq_client import call_groq, call_groq_transcribe, call_groqJSON
 
 
 A2T_PROMPT = """
-You are an intelligent assistant that converts raw spoken text into 
-structured personal organization data.
+You are an intelligent assistant that converts raw spoken text (unpunctuated, 
+conversational and possibly code-switched (e.g., Hinglish)) into structured personal organization data.
 
-Today's date is: "{{CURRENT_DATE}}"
+Today's date is: "{{CURRENT_DATE}}". Format is YYYY-MM-DD.
 
 Your task is to extract and categorize information into:
-
-1. tasks       – things the user needs to do (no fixed time)
+1. tasks       – things the user needs to do
 2. events      – scheduled activities with a time or date
 3. reminders   – time-bound alerts or deadlines
-4. notes       – background context, not directly actionable
+4. notes       – background context, not directly actionable. contextual information that supports a task or event but is not itself an action.
 
-Instructions:
-- Break input into meaningful individual items.
-- Extract and normalize time references using today's date as anchor. Today's date format is YYYY-MM-DD.
-  (e.g., "tomorrow 12:00 PM", "Saturday evening").
-- Identify relationships between items
-  (e.g., "buy gifts" is related to "marriage party").
-- If a sentence contains multiple actions, split into separate items.
-- If something is unclear, extract it as-is — do NOT invent details.
-- Keep output concise. Return ONLY valid JSON, no explanation.
+RULES:
+1. ATOMIC INTENTS: One intent = one item. Split multi-action or run-on speech into separate array elements.
+2. TIME ANCHORING: Resolve absolute and relative time expressions to strict ISO-8601 strings using Today's Date as your anchor. For vague spoken times (e.g., "evening", "after lunch"), use logical default times (e.g., 18:00:00, 14:00:00). 
+3. EXPLICIT LINKING: Link dependent or contextual items by placing the exact `title` string of the parent item into the `related_to` field.
+4. MISSING VALUES: For any required schema field where data is completely missing or unspecified in the speech, set that specific field value to `null`. Do not invent or assume data.
+5. TEMPORAL CONTEXT INHERITANCE: Spoken speech sets a time anchor once and applies it implicitly to subsequent statements. If a specific day (e.g., "Tomorrow") is established at the beginning of the transcript, all subsequent tasks, events, and reminders in that stream inherit that same date context unless the user explicitly shifts to a new day. 
+6. STRICT OUTPUT: Return ONLY a valid JSON object. No markdown wrappers (e.g., do not use ```json), no conversational filler, and no text outside the JSON object.
 
 Return this exact JSON structure:
-
 {
   "extracted_on": "{{CURRENT_DATE}}",
   "tasks":     [],
   "events":    [],
   "reminders": [],
-  "shopping":  [],
   "notes":     []
 }
 
