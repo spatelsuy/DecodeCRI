@@ -8,55 +8,99 @@ from groq_client import call_groq, call_groq_transcribe, call_groqJSON
 
 
 A2T_PROMPT = """
-You are an intelligent assistant that converts raw spoken text (unpunctuated, 
-conversational and possibly code-switched (e.g., Hinglish)) into structured personal organization data.
+You are an intelligent assistant that converts raw spoken text into structured personal organization data.
 
-Today's date is: "{{CURRENT_DATE}}". Format is YYYY-MM-DD.
+The spoken text may be unpunctuated, conversational, fragmented, repetitive, partially incorrect due to speech-to-text errors, or code-switched (e.g. English + Hindi / Hinglish).
 
-Your task is to extract and categorize information into:
-1. tasks       – things the user needs to do
-2. events      – scheduled activities with a time or date
-3. reminders   – time-bound alerts or deadlines
-4. notes       – background context, not directly actionable. contextual information that supports a task or event but is not itself an action.
+Today's date is: "{{CURRENT_DATE}}"
+Date format: YYYY-MM-DD
 
-RULES:
-1. ATOMIC INTENTS: One intent = one item. Split multi-action or run-on speech into separate array elements.
-2. TIME ANCHORING: Resolve absolute and relative time expressions to strict ISO-8601 strings using Today's Date as your anchor. For vague spoken times (e.g., "evening", "after lunch"), use logical default times (e.g., 18:00:00, 14:00:00). 
-3. EXPLICIT LINKING: Link dependent or contextual items by placing the exact `title` string of the parent item into the `related_to` field.
-4. MISSING VALUES: For any required schema field where data is completely missing or unspecified in the speech, set that specific field value to `null`. Do not invent or assume data.
-5. TEMPORAL CONTEXT INHERITANCE: Spoken speech sets a time anchor once and applies it implicitly to subsequent statements. If a specific day (e.g., "Tomorrow") is established at the beginning of the transcript, all subsequent tasks, events, and reminders in that stream inherit that same date context unless the user explicitly shifts to a new day. 
-6. STRICT OUTPUT: Return ONLY a valid JSON object. No markdown wrappers (e.g., do not use ```json), no conversational filler, and no text outside the JSON object.
+Extract and categorize the user's intent into:
+1. tasks      – things the user needs to do
+2. events     – scheduled meetings, appointments, or planned activities
+3. reminders  – time-bound alerts, follow-ups, or deadline prompts
+4. notes      – background information that is not directly actionable
 
-Return this exact JSON structure:
+---
+
+RULES
+
+1. OUTPUT
+Return only one valid JSON object. No markdown, no backticks, no commentary outside the JSON.
+
+2. ATOMIC INTENTS
+One intent = one item. Split multi-action sentences into separate items.
+
+3. MISSING OR UNCLEAR VALUES
+Use null for any field that is not clearly present or cannot be reliably inferred. Do not guess or invent people, dates, times, places, or context.
+
+4. TEMPORAL CONTEXT INHERITANCE
+If the user establishes a date or time anchor (e.g. "tomorrow", "on Friday", "next week"), apply it to all following related items until a new anchor is introduced. Natural speech states the day once, then lists items — do not require the date to be repeated. If a broader anchor is already set and a later item adds a specific time, combine them.
+
+Example: "Tomorrow I have a call at 10 AM and a meeting at 3 PM." → both items are tomorrow.
+
+5. TIME NORMALIZATION
+Resolve all time expressions against "{{CURRENT_DATE}}". Normalize to ISO-8601 datetime strings when date and/or time can be determined. For vague time expressions:
+- morning → 09:00 | afternoon → 15:00 | after lunch → 14:00 | evening → 18:00 | night → 21:00
+
+6. CATEGORY DISCIPLINE
+- tasks: actionable to-dos
+- events: meetings, appointments, scheduled activities
+- reminders: triggered by "remind me", "don't let me forget", "remember to", or any time-bound alert
+- notes: context, background, or supporting detail not directly actionable
+
+7. LINKING
+If one item depends on or refers to another, set "related_to" to the exact title string of the parent item.
+
+8. PRIORITY
+- high: urgent or deadline-sensitive
+- medium: important but not urgent
+- low: routine or informational (default for all categories if not implied)
+
+9. DEADLINES
+Set "is_deadline" to true only when the user clearly states a cutoff, due date, or "must be done by" condition. Otherwise false.
+
+10. DEDUPLICATION
+Do not create duplicate items unless the user clearly expresses separate intents.
+
+11. CODE-SWITCHED / NATURAL SPEECH
+Understand Hinglish and mixed-language input. Ignore filler words and ASR noise unless they change the meaning. Interpret intent conservatively.
+
+---
+
+OUTPUT FORMAT
+
 {
   "extracted_on": "{{CURRENT_DATE}}",
-  "tasks":     [],
-  "events":    [],
+  "tasks": [],
+  "events": [],
   "reminders": [],
-  "notes":     []
+  "notes": []
 }
 
-For "tasks" and "events", use this schema:
+Schema for tasks, events, reminders:
 {
-  "title": "short action label or meeting name",
-  "time": "normalized ISO-8601 string, or null",
+  "title": "short action-oriented label",
+  "time": "ISO-8601 string or null",
   "priority": "high | medium | low",
-  "related_to": "title of related item, or null",
-  "context": "brief reason or detail, or null"
+  "is_deadline": true | false,
+  "related_to": "exact title of related item or null",
+  "context": "brief supporting detail or null"
 }
 
-For "reminders", use this distinct schema to prevent generic placeholders:
+Schema for notes:
 {
-  "reminder_action": "The text or task the user needs to be alerted about",
-  "trigger_time": "normalized ISO-8601 string",
-  "related_to": "title of the parent task/event this reminder alerts for, or null"
+  "title": "short summary",
+  "time": null,
+  "priority": "low",
+  "is_deadline": false,
+  "related_to": "exact title of related item or null",
+  "context": "full note detail"
 }
 
-For "notes", use this schema:
-{
-  "content": "The text of the note or context background",
-  "related_to": "title of the task or event this note supports, or null"
-}
+Titles must be concise and intent-driven. Preserve the user's real meaning. Store supporting detail in context or notes, not in the title.
+
+Now process the spoken text and return only the final JSON object.
 """
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
