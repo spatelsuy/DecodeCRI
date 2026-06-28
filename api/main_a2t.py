@@ -12,7 +12,7 @@ from fastapi import Response
 from fastapi import Request
 
 from models import CRIDSGeneral, CRIState, A2TGeneral, AudioProcessingState
-from graph import workflow_a2t_runtime
+from graph import workflow_a2t_runtime, workflow_t2j_runtime
 
 from session_store import SESSION_STORE
 
@@ -24,7 +24,7 @@ import re
 import json
 
 
-app = FastAPI(title="IAM Agentic Maturity Platform")
+app = FastAPI(title="Organizer Platform")
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,6 +48,47 @@ supabase: Client = create_client(url, key)
 # ----------------------------
 # AGENT MAIN ENTRYPOINT
 # ----------------------------
+
+@app.post("/a2t/transcribe_text")
+async def transcribe_text(
+    user_name: str = Form(...),
+    client_time: str = Form(...),
+    text: str = Form(...)        # Plain text instead of file
+):
+    # Your transcription code here
+    print("CLIENT =", user_name)
+    
+    try:
+        initial_state: AudioProcessingState = {
+            "user_name": user_name,
+            "client_time": client_time,
+            "file_bytes": "",
+            "file_name": file.filename or "recording.webm",
+            "transcription_text": text,
+            "categorization_json": None
+        }
+        print("Text =", initial_state.get("transcription_text"))
+        # 3. Synchronously invoke the LangGraph pipeline
+        # .invoke() processes all node edges sequentially and returns the final updated state dictionary
+        print("INVOKING T2J GRAPH")
+        final_state = workflow_t2j_runtime.invoke(initial_state)
+        print("INVOKED T2J GRAPH")
+        # 4. Extract outputs from the final state dictionary and pass to frontend JSON
+        return {
+            "status": "success",
+            "user": final_state.get("user_name"),
+            "transcription": final_state.get("transcription_text"),
+            "analysis": final_state.get("categorization_json")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Graph Execution Failed: {str(e)}")
+    
+    return {"status": "success", "user": user_name}
+
+
+
+
+
 
 @app.post("/a2t/transcribe")
 async def transcribe_audio(
