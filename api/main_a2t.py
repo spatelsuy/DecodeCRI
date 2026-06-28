@@ -63,7 +63,7 @@ async def transcribe_text(
             "user_name": user_name,
             "client_time": client_time,
             "file_bytes": "",
-            "file_name": file.filename or "recording.webm",
+            "file_name": "dummy.webm",
             "transcription_text": text,
             "categorization_json": None
         }
