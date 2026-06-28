@@ -125,8 +125,9 @@ AUDIT CHECKLIST:
 4. SOURCE VERIFICATION: Check the "source_segment" field. Ensure the text snippet inside it actually exists word-for-word in the "user_speech_transcript". If you modify an item's date or time during this audit, ensure the "source_segment" still reflects the text that provided that context.
 
 OUTPUT INSTRUCTIONS:
-Fix any errors found during the audit.
-Output ONLY the finalized, repaired, and structurally valid JSON object matching the schema (including the "source_segment" field). 
+Fix any errors found during the audit. 
+CRITICAL: Keep the JSON structure as is. Do NOT wrap it under "extracted_json".
+Output ONLY the finalized, repaired, and structurally valid JSON object matching the original flat schema. 
 Do not include markdown formatting, backticks, or any conversational text.
 
 """
