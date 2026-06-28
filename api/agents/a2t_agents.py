@@ -126,7 +126,7 @@ AUDIT CHECKLIST:
 
 OUTPUT INSTRUCTIONS:
 Fix any errors found during the audit. 
-CRITICAL: Keep the JSON structure as is. Do NOT wrap it under "extracted_json".
+CRITICAL: Return ONLY the raw schema object containing the keys "extracted_on", "tasks", "events", "reminders", and "notes". Do NOT wrap your response inside "extracted_json", "user_payload", or any other nested root key.
 Output ONLY the finalized, repaired, and structurally valid JSON object matching the original flat schema. 
 Do not include markdown formatting, backticks, or any conversational text.
 
