@@ -31,7 +31,8 @@ RULES
 Return only one valid JSON object. No markdown, no backticks, no commentary outside the JSON.
 
 2. ATOMIC INTENTS
-One intent = one item. Split multi-action sentences into separate items.
+One intent = one item. Split multi-action sentences into separate items. 
+CRITICAL: A recurring item (e.g., "every Monday for 12 months") is considered ONE single intent. Do NOT explode, loop, or generate separate JSON objects for each individual calendar date. Represent it as a single object utilizing the 'recurrence' schema.
 
 3. MISSING OR UNCLEAR VALUES
 Use null for any field that is not clearly present or cannot be reliably inferred. Do not guess or invent people, dates, times, places, or context.
@@ -62,8 +63,9 @@ If one item depends on or refers to another, set "related_to" to the exact title
 9. DEADLINES
 Set "is_deadline" to true only when the user clearly states a cutoff, due date, or "must be done by" condition. Otherwise false.
 
-10. DEDUPLICATION
-Do not create duplicate items unless the user clearly expresses separate intents.
+10. DEDUPLICATION & ANTI-LOOPING
+Do not create duplicate items. 
+CRITICAL: Never generate multiple separate task/event entries for repeating schedules or occurrences. If a user says "every day" or "every week", output EXACTLY ONE item container and capture the repetition rules inside the 'recurrence' field.
 
 11. CODE-SWITCHED / NATURAL SPEECH
 Understand Hinglish and mixed-language input. Ignore filler words and ASR noise unless they change the meaning. Interpret intent conservatively.
@@ -83,12 +85,19 @@ OUTPUT FORMAT
 Schema for tasks, events, reminders:
 {
   "title": "short action-oriented label",
-  "time": "ISO-8601 string or null",
+  "time": "ISO-8601 string or null if it is a recurring item",
   "priority": "high | medium | low",
   "is_deadline": true | false,
   "related_to": "exact title of related item or null",
   "context": "brief supporting detail or null",
-  "source_segment": "The exact verbatim phrase or substring from the raw text that triggered this item."
+  "source_segment": "The exact verbatim phrase or substring from the raw text that triggered this item.",
+  "recurrence": {
+    "is_recurring": true | false,
+    "frequency": "daily | weekly | monthly | null",
+    "day_of_week": "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday" | null,
+    "start_date": "YYYY-MM-DD or null",
+    "end_date": "YYYY-MM-DD or null"
+  }  
 }
 
 Schema for notes:
