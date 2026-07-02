@@ -37,10 +37,12 @@ workflow_a2t = StateGraph(AudioProcessingState)
 # Add our two structural nodes
 workflow_a2t.add_node("transcribe_audio_text", transcribe_audio_text)
 workflow_a2t.add_node("categorize_text", categorize_text)
+workflow_a2t.add_node("categorize_validation", categorize_validation)
 
 # Establish the sequential dependency pipeline
 workflow_a2t.set_entry_point("transcribe_audio_text")
 workflow_a2t.add_edge("transcribe_audio_text", "categorize_text")
+workflow_a2t.add_edge("categorize_text", "categorize_validation")
 
 workflow_a2t_runtime = workflow_a2t.compile()
 
