@@ -108,10 +108,10 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="llama
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0,
-        "max_tokens": 2048,
-        "top_p": 0.1,
+        "max_tokens": 2048
+        # "top_p": 0.1,
         # 2. Force the Groq API engine to return a valid JSON object structure
-        "response_format": { "type": "json_object" } 
+        #"response_format": { "type": "json_object" } 
     }
     
     headers = {
