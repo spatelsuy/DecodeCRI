@@ -111,8 +111,7 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="llama
         "max_tokens": 2048,
         
         # === ADD THESE TWO LINES TO SECURE OPENAI/GPT-OSS-120B ===
-        "include_reasoning": False,
-        "reasoning_format": "hidden"
+        "include_reasoning": False
     }
     
     headers = {
