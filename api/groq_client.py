@@ -138,8 +138,20 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="llama
     try:
         # 5. Parse the raw string directly into a Python dictionary using native JSON
         parsed = json.loads(cleaned)
-    except json.JSONDecodeError:
-        raise Exception("LLM did not return valid JSON syntax")
+    except json.JSONDecodeError as e:
+        # === ADD THESE DIAGNOSTIC PRINTS HERE ===
+        print("\n" + "="*50)
+        print("CRITICAL: JSON DECODE ERROR ENCOUNTERED!")
+        print(f"Error Message: {e}")
+        print("="*50)
+        print("EXACT RAW OUTPUT RECEIVED FROM MODEL:")
+        print(raw_output)
+        print("="*50)
+        print("CLEANED STRING ATTEMPTED TO PARSE:")
+        print(cleaned)
+        print("="*50 + "\n")
+        
+        raise Exception(f"LLM did not return valid JSON syntax. Decode Error: {e}")
         
     if not isinstance(parsed, dict):
         raise Exception("LLM did not return a valid JSON object map")
