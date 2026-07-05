@@ -200,6 +200,7 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
       return {"categorization_json": {"error": "No valid text to validate"}}
 
     json_to_analyze = state.get("categorization_json", "")
+    print("json_to_analyze=======\n", json_to_analyze);
     if not json_to_analyze or "Error during transcription" in json_to_analyze:
       return {"categorization_json": {"error": "No valid text to validate"}} 
     
