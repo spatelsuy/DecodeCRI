@@ -182,6 +182,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         model="openai/gpt-oss-120b"
       )
       # This will be a standard Python dictionary containing the organized structure
+      print("\n===============categorization_json============\n", analysis_result);
       return {"categorization_json": analysis_result}
         
     except Exception as e:
