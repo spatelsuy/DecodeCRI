@@ -108,10 +108,11 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="llama
             {"role": "user", "content": user_prompt}
         ],
         "temperature": 0,
-        "max_tokens": 2048
-        # "top_p": 0.1,
-        # 2. Force the Groq API engine to return a valid JSON object structure
-        #"response_format": { "type": "json_object" } 
+        "max_tokens": 2048,
+        
+        # === ADD THESE TWO LINES TO SECURE OPENAI/GPT-OSS-120B ===
+        "include_reasoning": False,
+        "reasoning_format": "hidden"
     }
     
     headers = {
@@ -130,10 +131,25 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="llama
         raise Exception(f"Groq API error: {response.text}")
         
     # 3. Read the raw text response from the LLM
-    raw_output = response.json()["choices"][0]["message"]["content"].strip()
+    message_obj = response.json()["choices"][0]["message"]
+    raw_output = message_obj.get("content", "")
+    if not raw_output or raw_output.strip() == "":
+        # Diagnostic print if the model returned nothing but background reasoning
+        print("\n--- DEBUG ERROR ---")
+        print("Groq Response JSON structure:", response.json())
+        raise Exception("LLM content field came back completely empty. Check reasoning fields.")
+
+    raw_output = raw_output.strip()
     
     # 4. Clean up Markdown blocks if the model mistakenly included them
     cleaned = raw_output.replace("```json", "").replace("```", "").strip()
+
+    # 4b. Extreme fallback: If it wrapped JSON inside conversational filler, find the brackets
+    if not cleaned.startswith("{"):
+        start_idx = cleaned.find("{")
+        end_idx = cleaned.rfind("}") + 1
+        if start_idx != -1 and end_idx != 0:
+            cleaned = cleaned[start_idx:end_idx]
     
     try:
         # 5. Parse the raw string directly into a Python dictionary using native JSON
