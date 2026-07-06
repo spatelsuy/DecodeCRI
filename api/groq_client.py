@@ -93,8 +93,8 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
 
 
 def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="llama-3.1-8b-instant"):
-    #GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY_PAID")
-    GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
+    GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY_PAID")
+    #GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
     if not GROQ_API_KEY:
         raise RuntimeError("PROMPT_GROQ_KEY not found in environment variables")
         
