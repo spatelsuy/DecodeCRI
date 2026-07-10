@@ -70,51 +70,12 @@ CRITICAL: Never generate multiple separate task/event entries for repeating sche
 11. CODE-SWITCHED / NATURAL SPEECH
 Understand Hinglish and mixed-language input. Ignore filler words and ASR noise unless they change the meaning. Interpret intent conservatively.
 
----
-
-OUTPUT FORMAT
-
-{
-  "extracted_on": "{{CURRENT_DATE}}",
-  "tasks": [],
-  "events": [],
-  "reminders": [],
-  "notes": []
-}
-
-Schema for tasks, events, reminders:
-{
-  "title": "short action-oriented label",
-  "time": "ISO-8601 string or null if it is a recurring item",
-  "priority": "high | medium | low",
-  "is_deadline": true | false,
-  "related_to": "exact title of related item or null",
-  "context": "brief supporting detail or null",
-  "source_segment": "The exact verbatim phrase or substring from the raw text that triggered this item.",
-  "recurrence": {
-    "is_recurring": true | false,
-    "frequency": "daily | weekly | monthly | null",
-    "day_of_week": "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday" | null,
-    "start_date": "YYYY-MM-DD or null",
-    "end_date": "YYYY-MM-DD or null"
-  }  
-}
-
-Schema for notes:
-{
-  "title": "short summary",
-  "time": null,
-  "priority": "low",
-  "is_deadline": false,
-  "related_to": "exact title of related item or null",
-  "context": "full note detail",
-  "source_segment": "The exact verbatim phrase or substring from the raw text that triggered this note."
-}
-
 Titles must be concise and intent-driven. Preserve the user's real meaning. Store supporting detail in context or notes, not in the title.
-
 Now process the spoken text and return only the final JSON object.
 """
+
+
+
 
 VALIDATION_PROMPT = """
 You are a data validation utility. Your job is to audit a structured JSON object against the raw text it was extracted from and correct any mistakes.
