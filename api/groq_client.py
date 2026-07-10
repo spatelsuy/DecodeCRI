@@ -9,6 +9,130 @@ load_dotenv()
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+
+my_strict_schema = """
+
+{
+    "type": "object",
+    "properties": {
+        "extracted_on": {
+            "type": "string",
+            "description": "ISO-8601 date string reflecting the anchor current date."
+        },
+        "tasks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "Short action-oriented label"},
+                    # Note how nulls are explicitly declared as valid fallback types
+                    "time": {"type": ["string", "null"], "description": "ISO-8601 string or null if it is a recurring item"},
+                    "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+                    "is_deadline": {"type": "boolean"},
+                    "related_to": {"type": ["string", "null"], "description": "Exact title of related item or null"},
+                    "context": {"type": ["string", "null"], "description": "Brief supporting detail or null"},
+                    "source_segment": {"type": "string", "description": "The exact verbatim phrase or substring from the raw text."},
+                    "recurrence": {
+                        "type": "object",
+                        "properties": {
+                            "is_recurring": {"type": "boolean"},
+                            "frequency": {"type": ["string", "null"], "enum": ["daily", "weekly", "monthly", null]},
+                            "day_of_week": {"type": ["string", "null"], "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", null]},
+                            "start_date": {"type": ["string", "null"]},
+                            "end_date": {"type": ["string", "null"]}
+                        },
+                        "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
+                        "additionalProperties": False
+                    }
+                },
+                "required": ["title", "time", "priority", "is_deadline", "related_to", "context", "source_segment", "recurrence"],
+                "additionalProperties": False
+            }
+        },
+        "events": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "time": {"type": ["string", "null"]},
+                    "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+                    "is_deadline": {"type": "boolean"},
+                    "related_to": {"type": ["string", "null"]},
+                    "context": {"type": ["string", "null"]},
+                    "source_segment": {"type": "string"},
+                    "recurrence": {
+                        "type": "object",
+                        "properties": {
+                            "is_recurring": {"type": "boolean"},
+                            "frequency": {"type": ["string", "null"], "enum": ["daily", "weekly", "monthly", null]},
+                            "day_of_week": {"type": ["string", "null"], "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", null]},
+                            "start_date": {"type": ["string", "null"]},
+                            "end_date": {"type": ["string", "null"]}
+                        },
+                        "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
+                        "additionalProperties": False
+                    }
+                },
+                "required": ["title", "time", "priority", "is_deadline", "related_to", "context", "source_segment", "recurrence"],
+                "additionalProperties": False
+            }
+        },
+        "reminders": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "time": {"type": ["string", "null"]},
+                    "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+                    "is_deadline": {"type": "boolean"},
+                    "related_to": {"type": ["string", "null"]},
+                    "context": {"type": ["string", "null"]},
+                    "source_segment": {"type": "string"},
+                    "recurrence": {
+                        "type": "object",
+                        "properties": {
+                            "is_recurring": {"type": "boolean"},
+                            "frequency": {"type": ["string", "null"], "enum": ["daily", "weekly", "monthly", null]},
+                            "day_of_week": {"type": ["string", "null"], "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", null]},
+                            "start_date": {"type": ["string", "null"]},
+                            "end_date": {"type": ["string", "null"]}
+                        },
+                        "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
+                        "additionalProperties": False
+                    }
+                },
+                "required": ["title", "time", "priority", "is_deadline", "related_to", "context", "source_segment", "recurrence"],
+                "additionalProperties": False
+            }
+        },
+        "notes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "short summary"},
+                    "time": {"type": ["string", "null"]},
+                    "priority": {"type": "string"},
+                    "is_deadline": {"type": "boolean"},
+                    "related_to": {"type": ["string", "null"]},
+                    "context": {"type": "string", "description": "full note detail"},
+                    "source_segment": {"type": "string"}
+                },
+                "required": ["title", "time", "priority", "is_deadline", "related_to", "context", "source_segment"],
+                "additionalProperties": False
+            }
+        }
+    },
+    "required": ["extracted_on", "tasks", "events", "reminders", "notes"],
+    "additionalProperties": False
+}
+
+"""
+
+
+
 #model="mixtral-8x7b-32768"
 def call_groq(system_prompt: str, user_payload: Dict[str, Any], model="llama-3.1-8b-instant"):
     GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
@@ -112,7 +236,15 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="llama
         "max_tokens": 8192,
         
         # === ADD THESE TWO LINES TO SECURE OPENAI/GPT-OSS-120B ===
-        "include_reasoning": False
+        "include_reasoning": False,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "schedule_extraction_registry",
+                "strict": True, 
+                "schema": my_strict_schema
+            }
+        }        
     }
     
     headers = {
