@@ -10,9 +10,7 @@ load_dotenv()
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
-my_strict_schema = """
-
-{
+my_strict_schema = {
     "type": "object",
     "properties": {
         "extracted_on": {
@@ -25,7 +23,6 @@ my_strict_schema = """
                 "type": "object",
                 "properties": {
                     "title": {"type": "string", "description": "Short action-oriented label"},
-                    # Note how nulls are explicitly declared as valid fallback types
                     "time": {"type": ["string", "null"], "description": "ISO-8601 string or null if it is a recurring item"},
                     "priority": {"type": "string", "enum": ["high", "medium", "low"]},
                     "is_deadline": {"type": "boolean"},
@@ -36,10 +33,22 @@ my_strict_schema = """
                         "type": "object",
                         "properties": {
                             "is_recurring": {"type": "boolean"},
-                            "frequency": {"type": ["string", "null"], "enum": ["daily", "weekly", "monthly", null]},
-                            "day_of_week": {"type": ["string", "null"], "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", null]},
-                            "start_date": {"type": ["string", "null"]},
-                            "end_date": {"type": ["string", "null"]}
+                            "frequency": {
+                                "type": ["string", "null"], 
+                                "enum": ["daily", "weekly", "monthly"] # Cleaned: Removed null
+                            },
+                            "day_of_week": {
+                                "type": ["string", "null"], 
+                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] # Cleaned: Removed null
+                            },
+                            "start_date": {
+                                "type": ["string", "null"],
+                                "description": "The date the recurring schedule begins, formatted strictly as YYYY-MM-DD or null."
+                            },
+                            "end_date": {
+                                "type": ["string", "null"],
+                                "description": "The date the recurring schedule ends, formatted strictly as YYYY-MM-DD or null."
+                            }
                         },
                         "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
@@ -65,10 +74,22 @@ my_strict_schema = """
                         "type": "object",
                         "properties": {
                             "is_recurring": {"type": "boolean"},
-                            "frequency": {"type": ["string", "null"], "enum": ["daily", "weekly", "monthly", null]},
-                            "day_of_week": {"type": ["string", "null"], "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", null]},
-                            "start_date": {"type": ["string", "null"]},
-                            "end_date": {"type": ["string", "null"]}
+                            "frequency": {
+                                "type": ["string", "null"], 
+                                "enum": ["daily", "weekly", "monthly"]
+                            },
+                            "day_of_week": {
+                                "type": ["string", "null"], 
+                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                            },
+                            "start_date": {
+                                "type": ["string", "null"],
+                                "description": "The date the recurring schedule begins, formatted strictly as YYYY-MM-DD or null."
+                            },
+                            "end_date": {
+                                "type": ["string", "null"],
+                                "description": "The date the recurring schedule ends, formatted strictly as YYYY-MM-DD or null."
+                            }
                         },
                         "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
@@ -94,10 +115,22 @@ my_strict_schema = """
                         "type": "object",
                         "properties": {
                             "is_recurring": {"type": "boolean"},
-                            "frequency": {"type": ["string", "null"], "enum": ["daily", "weekly", "monthly", null]},
-                            "day_of_week": {"type": ["string", "null"], "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", null]},
-                            "start_date": {"type": ["string", "null"]},
-                            "end_date": {"type": ["string", "null"]}
+                            "frequency": {
+                                "type": ["string", "null"], 
+                                "enum": ["daily", "weekly", "monthly"]
+                            },
+                            "day_of_week": {
+                                "type": ["string", "null"], 
+                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                            },
+                            "start_date": {
+                                "type": ["string", "null"],
+                                "description": "The date the recurring schedule begins, formatted strictly as YYYY-MM-DD or null."
+                            },
+                            "end_date": {
+                                "type": ["string", "null"],
+                                "description": "The date the recurring schedule ends, formatted strictly as YYYY-MM-DD or null."
+                            }
                         },
                         "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
@@ -128,8 +161,6 @@ my_strict_schema = """
     "required": ["extracted_on", "tasks", "events", "reminders", "notes"],
     "additionalProperties": False
 }
-
-"""
 
 
 
