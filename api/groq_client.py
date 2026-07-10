@@ -9,7 +9,6 @@ load_dotenv()
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-
 my_strict_schema = {
     "type": "object",
     "properties": {
@@ -23,32 +22,27 @@ my_strict_schema = {
                 "type": "object",
                 "properties": {
                     "title": {"type": "string", "description": "Short action-oriented label"},
-                    "time": {"type": ["string", "null"], "description": "ISO-8601 string or null if it is a recurring item"},
+                    "time": {"type": ["string", "null"], "description": "ISO-8601 string or null"},
                     "priority": {"type": "string", "enum": ["high", "medium", "low"]},
                     "is_deadline": {"type": "boolean"},
-                    "related_to": {"type": ["string", "null"], "description": "Exact title of related item or null"},
-                    "context": {"type": ["string", "null"], "description": "Brief supporting detail or null"},
-                    "source_segment": {"type": "string", "description": "The exact verbatim phrase or substring from the raw text."},
+                    "related_to": {"type": ["string", "null"]},
+                    "context": {"type": ["string", "null"]},
+                    "source_segment": {"type": "string"},
                     "recurrence": {
                         "type": "object",
                         "properties": {
                             "is_recurring": {"type": "boolean"},
                             "frequency": {
                                 "type": ["string", "null"], 
-                                "description": "The cadence of repetition. Use standard intervals (daily, weekly, monthly, quarterly, annually) if matched, or explicit custom verbal intervals like 'every 2 days', 'every alternate day', or 'every 3 weeks' if stated exactly by the user."
+                                "description": "The cadence of repetition (daily, weekly, bi-weekly, monthly, quarterly, semi-annually, annually) or any custom interval."
                             },
                             "day_of_week": {
                                 "type": ["string", "null"], 
-                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None] # Cleaned: Removed null
+                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
+                                "description": "Specific day if mentioned, otherwise null."
                             },
-                            "start_date": {
-                                "type": ["string", "null"],
-                                "description": "The date the recurring schedule begins, formatted strictly as YYYY-MM-DD or null."
-                            },
-                            "end_date": {
-                                "type": ["string", "null"],
-                                "description": "The date the recurring schedule ends, formatted strictly as YYYY-MM-DD or null."
-                            }
+                            "start_date": {"type": ["string", "null"]},
+                            "end_date": {"type": ["string", "null"]}
                         },
                         "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
@@ -76,20 +70,16 @@ my_strict_schema = {
                             "is_recurring": {"type": "boolean"},
                             "frequency": {
                                 "type": ["string", "null"], 
-                                "enum": ["daily", "weekly", "monthly"]
+                                "description": "The cadence of repetition (daily, weekly, bi-weekly, monthly, quarterly, semi-annually, annually) or any custom interval."
                             },
                             "day_of_week": {
                                 "type": ["string", "null"], 
-                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                                # FIXED HERE: Added None to allow null output
+                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
+                                "description": "Specific day if mentioned, otherwise null."
                             },
-                            "start_date": {
-                                "type": ["string", "null"],
-                                "description": "The date the recurring schedule begins, formatted strictly as YYYY-MM-DD or null."
-                            },
-                            "end_date": {
-                                "type": ["string", "null"],
-                                "description": "The date the recurring schedule ends, formatted strictly as YYYY-MM-DD or null."
-                            }
+                            "start_date": {"type": ["string", "null"]},
+                            "end_date": {"type": ["string", "null"]}
                         },
                         "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
@@ -117,20 +107,16 @@ my_strict_schema = {
                             "is_recurring": {"type": "boolean"},
                             "frequency": {
                                 "type": ["string", "null"], 
-                                "enum": ["daily", "weekly", "monthly"]
+                                "description": "The cadence of repetition (daily, weekly, bi-weekly, monthly, quarterly, semi-annually, annually) or any custom interval."
                             },
                             "day_of_week": {
                                 "type": ["string", "null"], 
-                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                                # FIXED HERE: Added None to allow null output
+                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
+                                "description": "Specific day if mentioned, otherwise null."
                             },
-                            "start_date": {
-                                "type": ["string", "null"],
-                                "description": "The date the recurring schedule begins, formatted strictly as YYYY-MM-DD or null."
-                            },
-                            "end_date": {
-                                "type": ["string", "null"],
-                                "description": "The date the recurring schedule ends, formatted strictly as YYYY-MM-DD or null."
-                            }
+                            "start_date": {"type": ["string", "null"]},
+                            "end_date": {"type": ["string", "null"]}
                         },
                         "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
@@ -161,6 +147,7 @@ my_strict_schema = {
     "required": ["extracted_on", "tasks", "events", "reminders", "notes"],
     "additionalProperties": False
 }
+
 
 
 
