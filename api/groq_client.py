@@ -35,7 +35,7 @@ my_strict_schema = {
                             "is_recurring": {"type": "boolean"},
                             "frequency": {
                                 "type": ["string", "null"], 
-                                "enum": ["daily", "weekly", "monthly"] # Cleaned: Removed null
+                                "description": "The cadence of repetition. Use standard intervals (daily, weekly, monthly, quarterly, annually) if matched, or explicit custom verbal intervals like 'every 2 days', 'every alternate day', or 'every 3 weeks' if stated exactly by the user."
                             },
                             "day_of_week": {
                                 "type": ["string", "null"], 
