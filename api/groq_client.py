@@ -39,7 +39,7 @@ my_strict_schema = {
                             },
                             "day_of_week": {
                                 "type": ["string", "null"], 
-                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] # Cleaned: Removed null
+                                "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None] # Cleaned: Removed null
                             },
                             "start_date": {
                                 "type": ["string", "null"],
