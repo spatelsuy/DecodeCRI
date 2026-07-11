@@ -225,16 +225,27 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
 
     linguistic_blueprint = get_linguistic_blueprint(text_to_analyze)
     user_payload = {
-       "execution_mode": "Strict 1:1 Schema Mapping",
-       "user_speech_transcript": text_to_analyze, 
-       "linguistic_blueprint": linguistic_blueprint,
-       "final_validation_instruction": (
-           "Loop through each item in 'detected_actions'. "
-           "For each item, generate exactly one object in the schema. "
-           "Fix category errors from 'previously_extracted_json' using the following mappings: "
-           "'prepare' and 'check' must map to 'tasks'. Ensure 'time' parameters are only set "
-           "if explicitly derived from the action's corresponding 'time_context'."
-       )
+        "raw_audio_transcript": text_to_analyze, 
+        "structural_blueprint": linguistic_blueprint,
+        "system_action_directives": {
+        "classification_rule_matrix": [
+             {
+                "if_blueprint_verb_implies": "Action, execution, chore, preparation, operational task, or individual work", 
+                "force_category": "tasks",
+                "examples": ["prepare", "check", "write", "fix", "review", "update", "send"]
+             },
+             {
+                "if_blueprint_verb_implies": "Interactive meeting, scheduled sync, presence-based commitment, or calendar block", 
+                "force_category": "events",
+                "examples": ["attend", "meet", "call", "go to", "visit", "interview"]
+             },
+             {
+                "if_blueprint_verb_implies": "An alert request, a reminder anchor, or a request to not forget", 
+                "force_category": "reminders",
+                "examples": ["remind", "remember", "forget"]
+             }
+        ]
+        }
     }
     
     try:
