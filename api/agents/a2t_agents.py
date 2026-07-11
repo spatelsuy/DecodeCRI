@@ -41,8 +41,8 @@ Use null for any field that is not clearly present or cannot be reliably inferre
 
 4. TEMPORAL CONTEXT INHERITANCE
 If the user establishes a date or time anchor (e.g. "tomorrow", "on Friday", "next week"), apply it to all following related items until a new anchor is introduced. Natural speech states the day once, then lists items — do not require the date to be repeated. If a broader anchor is already set and a later item adds a specific time, combine them.
-
 Example: "Tomorrow I have a call at 10 AM and a meeting at 3 PM." → both items are tomorrow.
+CRITICAL TEMPORAL ISOLATION: Only apply a specific date/time anchor to an item if that specific time token appears directly in the item's time_context from the provided blueprint or explicitly touches it in the text segment. If an action's isolated time_context is null, do not arbitrarily apply neighboring precise time anchors to it.
 
 5. TIME NORMALIZATION
 Resolve all time expressions against "{{CURRENT_DATE}}". Normalize to ISO-8601 datetime strings when date and/or time can be determined. For vague time expressions:
@@ -87,6 +87,7 @@ Understand Hinglish and mixed-language input. Ignore filler words and ASR noise 
 
 12. LINGUISTIC BLUEPRINT CROSS-REFERENCE
 You will receive a 'linguistic_blueprint' containing pre-extracted actions, targets, and time contexts. 
+EXACT COUNT ALIGNMENT: Your final generated arrays must match the intent boundaries extracted in the blueprint. Every structural action block identified in linguistic_blueprint.detected_actions should produce a corresponding entry in your response. Do not miss or collapse them.
 - Use this blueprint as structural guardrails to ensure you do not miss hidden or nested tasks.
 - If 'is_negated' is true for an action, do not create a standard active task/event for it. Instead, process it as a cancellation or skip condition (e.g., set relevant parameters to null or note the exception).
 - Correct any clear misalignments or leaked context from the blueprint using your advanced language understanding of the raw 'user_speech_transcript'.
@@ -228,6 +229,20 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         "user_speech_transcript": text_to_analyze,
         "linguistic_blueprint": linguistic_blueprint
     }
+
+   user_payload = {
+       "execution_mode": "Strict 1:1 Schema Mapping",
+       "user_speech_transcript": text_to_analyze, 
+       "linguistic_blueprint": linguistic_blueprint,
+       "final_validation_instruction": (
+           "Loop through each item in 'detected_actions'. "
+           "For each item, generate exactly one object in the schema. "
+           "Fix category errors from 'previously_extracted_json' using the following mappings: "
+           "'prepare' and 'check' must map to 'tasks'. Ensure 'time' parameters are only set "
+           "if explicitly derived from the action's corresponding 'time_context'."
+       )
+   }
+   
     
     try:
       # Call your existing function using a smart, large context model
