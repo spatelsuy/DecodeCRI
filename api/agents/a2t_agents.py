@@ -224,13 +224,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         return {"categorization_json": {"error": "No valid text to analyze"}}
 
     linguistic_blueprint = get_linguistic_blueprint(text_to_analyze)
-    
     user_payload = {
-        "user_speech_transcript": text_to_analyze,
-        "linguistic_blueprint": linguistic_blueprint
-    }
-
-   user_payload = {
        "execution_mode": "Strict 1:1 Schema Mapping",
        "user_speech_transcript": text_to_analyze, 
        "linguistic_blueprint": linguistic_blueprint,
@@ -241,8 +235,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
            "'prepare' and 'check' must map to 'tasks'. Ensure 'time' parameters are only set "
            "if explicitly derived from the action's corresponding 'time_context'."
        )
-   }
-   
+    }
     
     try:
       # Call your existing function using a smart, large context model
