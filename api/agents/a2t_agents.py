@@ -1,6 +1,4 @@
 
-import spacy
-
 import yaml
 import time
 import difflib
@@ -41,8 +39,8 @@ Use null for any field that is not clearly present or cannot be reliably inferre
 
 4. TEMPORAL CONTEXT INHERITANCE
 If the user establishes a date or time anchor (e.g. "tomorrow", "on Friday", "next week"), apply it to all following related items until a new anchor is introduced. Natural speech states the day once, then lists items — do not require the date to be repeated. If a broader anchor is already set and a later item adds a specific time, combine them.
+
 Example: "Tomorrow I have a call at 10 AM and a meeting at 3 PM." → both items are tomorrow.
-CRITICAL TEMPORAL ISOLATION: Only apply a specific date/time anchor to an item if that specific time token appears directly in the item's time_context from the provided blueprint or explicitly touches it in the text segment. If an action's isolated time_context is null, do not arbitrarily apply neighboring precise time anchors to it.
 
 5. TIME NORMALIZATION
 Resolve all time expressions against "{{CURRENT_DATE}}". Normalize to ISO-8601 datetime strings when date and/or time can be determined. For vague time expressions:
@@ -53,19 +51,6 @@ Resolve all time expressions against "{{CURRENT_DATE}}". Normalize to ISO-8601 d
 - events: meetings, appointments, scheduled activities
 - reminders: triggered by "remind me", "don't let me forget", "remember to", or any time-bound alert
 - notes: context, background, or supporting detail not directly actionable
-
-
-6a. CATEGORY RESOLUTION TIE-BREAKER PROTOCOL
-If an item overlaps multiple categories, you MUST resolve it using this strict linguistic syntax hierarchy:
-
-6a.1. FORCE TO 'REMINDERS' if the text contains explicit self-alert phrasing: "remind me to", "don't let me forget", "remember to", or "wake me up". 
-   - Example: "Remind me to attend the 9am scrum" → REMINDER (Overrides Event).
-
-6a.2. FORCE TO 'EVENTS' if the text describes a meeting, appointment, interactive session, social plan, or presence-based commitment involving a specific time or location anchor.
-   - Example: "I need to go to office at 8am" or "I have a call with Bob" → EVENT (Overrides Task).
-
-6a.3. FORCE TO 'TASKS' if the action is an independent, non-interactive, execution-based chore, deliverable, or to-do, even if it has a target time window or general date constraint.
-   - Example: "I need to prepare the complexity score tonight" → TASK.
 
 7. LINKING
 If one item depends on or refers to another, set "related_to" to the exact title string of the parent item.
@@ -84,13 +69,6 @@ CRITICAL: Never generate multiple separate task/event entries for repeating sche
 
 11. CODE-SWITCHED / NATURAL SPEECH
 Understand Hinglish and mixed-language input. Ignore filler words and ASR noise unless they change the meaning. Interpret intent conservatively.
-
-12. LINGUISTIC BLUEPRINT CROSS-REFERENCE
-You will receive a 'linguistic_blueprint' containing pre-extracted actions, targets, and time contexts. 
-EXACT COUNT ALIGNMENT: Your final generated arrays must match the intent boundaries extracted in the blueprint. Every structural action block identified in linguistic_blueprint.detected_actions should produce a corresponding entry in your response. Do not miss or collapse them.
-- Use this blueprint as structural guardrails to ensure you do not miss hidden or nested tasks.
-- If 'is_negated' is true for an action, do not create a standard active task/event for it. Instead, process it as a cancellation or skip condition (e.g., set relevant parameters to null or note the exception).
-- Correct any clear misalignments or leaked context from the blueprint using your advanced language understanding of the raw 'user_speech_transcript'.
 
 Titles must be concise and intent-driven. Preserve the user's real meaning. Store supporting detail in context or notes, not in the title.
 Now process the spoken text and return only the final JSON object.
@@ -123,79 +101,6 @@ Output ONLY the finalized, repaired, and structurally valid JSON object matching
 Do not include markdown formatting, backticks, or any conversational text.
 
 """
-# ========================================================
-# NEW: RUN SPACY LOCAL DEPENDENCY PARSING BEFORE API CALL
-# ========================================================
-def get_linguistic_blueprint(text_to_analyze: str) -> Dict[str, Any]:
-    """
-    Parses unpunctuated voice transcripts locally using spaCy dependency trees 
-    to extract structural hooks for verbs, objects, time context, and negation.
-    """
-    try:
-        nlp = spacy.load("en_core_web_sm")
-        doc = nlp(text_to_analyze)
-        detected_actions = []
-        
-        for token in doc:
-            if token.pos_ in ["VERB", "AUX"] or token.dep_ == "ROOT":
-                verb_text = token.text
-                obj_text = None
-                time_markers = []
-                
-                # 1. Extract Objects (Direct or Prepositional Destinations)
-                dobj_tokens = [c for c in token.children if c.dep_ == "dobj"]
-                if dobj_tokens:
-                    obj_text = "".join([t.text_with_ws for t in dobj_tokens[0].subtree]).strip()
-                else:
-                    prep_tokens = [c for c in token.children if c.dep_ == "prep"]
-                    if prep_tokens:
-                        obj_text = f"{token.text} " + "".join([t.text_with_ws for t in prep_tokens[0].subtree]).strip()
-                
-                # 2. Handle nested clauses (e.g., "Remind me to put...")
-                xcomp_tokens = [c for c in token.children if c.dep_ == "xcomp"]
-                if xcomp_tokens:
-                    nested_verb = xcomp_tokens[0]
-                    nested_dobj = [c for c in nested_verb.children if c.dep_ in ["dobj", "pobj", "advmod"]]
-                    if nested_dobj:
-                        verb_text = nested_verb.text
-                        obj_text = "".join([t.text_with_ws for t in nested_verb.subtree]).strip()
-
-                # 3. Extract Related Times / Anchors
-                for sub_token in doc:
-                    if sub_token.ent_type_ in ["TIME", "DATE"] or sub_token.dep_ == "npadvmod" or sub_token.text.lower() in ["tonight", "morning", "evening"]:
-                        ancestors = [a.text for a in sub_token.ancestors]
-                        if verb_text in ancestors or (obj_text and any(w in obj_text for w in ancestors)):
-                            if sub_token.text not in time_markers:
-                                time_markers.append(sub_token.text)
-                
-                # 4. Finalize & Sanitize Entry
-                if obj_text:
-                    for tm in time_markers:
-                        obj_text = obj_text.replace(tm, "").strip(", ")
-                    
-                    # Capture negation flags (e.g., "not", "never")
-                    is_negated = any(child.dep_ == "neg" for child in token.children) or \
-                                 any(child.dep_ == "neg" for child in token.head.children)
-
-                    action_entry = {
-                        "verb": verb_text,
-                        "object": obj_text,
-                        "time_context": " ".join(time_markers) if time_markers else None,
-                        "is_negated": is_negated
-                    }
-                    
-                    # Prevent duplicates and filter out weak direct objects like "me"
-                    if action_entry not in detected_actions and obj_text.lower() != "me":
-                        detected_actions.append(action_entry)
-                        
-        return {"detected_actions": detected_actions}
-
-    except Exception as spacy_err:
-        print(f"Warning: spaCy fallback triggered due to error: {spacy_err}")
-        return {"detected_actions": []}
-        
-
-################################################################################################
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
     print(f"--- Node 1: Transcribing via Raw Requests for {state['user_name']} ---")
@@ -222,30 +127,9 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
-
-    linguistic_blueprint = get_linguistic_blueprint(text_to_analyze)
+    
     user_payload = {
-        "raw_audio_transcript": text_to_analyze, 
-        "structural_blueprint": linguistic_blueprint,
-        "system_action_directives": {
-        "classification_rule_matrix": [
-             {
-                "if_blueprint_verb_implies": "Action, execution, chore, preparation, operational task, or individual work", 
-                "force_category": "tasks",
-                "examples": ["prepare", "check", "write", "fix", "review", "update", "send"]
-             },
-             {
-                "if_blueprint_verb_implies": "Interactive meeting, scheduled sync, presence-based commitment, or calendar block", 
-                "force_category": "events",
-                "examples": ["attend", "meet", "call", "go to", "visit", "interview"]
-             },
-             {
-                "if_blueprint_verb_implies": "An alert request, a reminder anchor, or a request to not forget", 
-                "force_category": "reminders",
-                "examples": ["remind", "remember", "forget"]
-             }
-        ]
-        }
+        "user_speech_transcript": text_to_analyze
     }
     
     try:
@@ -330,5 +214,3 @@ def print_json_diff(before_dict, after_dict):
         print("No changes detected. The validation step matched the extraction step perfectly.")
     else:
         print(diff_text)
-
-
