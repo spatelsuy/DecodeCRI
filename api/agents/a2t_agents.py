@@ -1,4 +1,6 @@
 
+import spacy
+
 import yaml
 import time
 import difflib
