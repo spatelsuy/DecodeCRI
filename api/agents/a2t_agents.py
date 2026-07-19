@@ -246,7 +246,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         return {"categorization_json": {"error": "No valid text to analyze"}}
 
     linguistic_blueprint = get_linguistic_blueprint(text_to_analyze)
-    print("LINGUISTIC_BLUEPRINT", linguistic_blueprint);
+    print("LINGUISTIC_BLUEPRINT", linguistic_blueprint)
     user_payload = {
         "raw_audio_transcript": text_to_analyze, 
         "linguistic_blueprint": linguistic_blueprint,
