@@ -252,31 +252,11 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
 
-    linguistic_blueprint = get_linguistic_blueprint(text_to_analyze)
-    generate_blueprint(text_to_analyze)
+    #linguistic_blueprint = get_linguistic_blueprint(text_to_analyze)
+    linguistic_blueprint = generate_blueprint(text_to_analyze)
     print("LINGUISTIC_BLUEPRINT", linguistic_blueprint)
     user_payload = {
-        "raw_audio_transcript": text_to_analyze, 
-        "linguistic_blueprint": linguistic_blueprint,
-        "system_action_directives": {
-        "classification_rule_matrix": [
-             {
-                "if_blueprint_verb_implies": "Action, execution, chore, preparation, operational task, or individual work", 
-                "force_category": "tasks",
-                "examples": ["prepare", "check", "write", "fix", "review", "update", "send"]
-             },
-             {
-                "if_blueprint_verb_implies": "Interactive meeting, scheduled sync, presence-based commitment, or calendar block", 
-                "force_category": "events",
-                "examples": ["attend", "meet", "call", "go to", "visit", "interview"]
-             },
-             {
-                "if_blueprint_verb_implies": "An alert request, a reminder anchor, or a request to not forget", 
-                "force_category": "reminders",
-                "examples": ["remind", "remember", "forget"]
-             }
-        ]
-        }
+        "linguistic_blueprint": linguistic_blueprint
     }
     
     try:
