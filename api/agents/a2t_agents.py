@@ -9,8 +9,7 @@ from datetime import datetime
 from typing import Dict, Any
 from models import AudioProcessingState
 from groq_client import call_groq, call_groq_transcribe, call_groqJSON
-from spacy_lib.linguistic_blueprint import *
-
+from spacy_lib.linguistic_blueprint import generate_blueprint
 
 A2T_PROMPT = """
 You are an intelligent assistant that converts raw spoken text into structured personal organization data.
