@@ -1,3 +1,6 @@
+import sys
+import os
+
 
 import spacy
 
@@ -10,6 +13,7 @@ from typing import Dict, Any
 from models import AudioProcessingState
 from groq_client import call_groq, call_groq_transcribe, call_groqJSON
 
+sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from spacy_lib.linguistic_blueprint import generate_blueprint
