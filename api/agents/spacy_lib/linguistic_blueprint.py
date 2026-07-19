@@ -310,7 +310,7 @@ def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None):
         evidence[analyzer.key] = analyzer.analyze(doc, raw_text)
 
     return {
-        "raw_text": raw_text,
+        "user_speech_transcript": raw_text,
         "language": "en",
         "current_date": base_date.isoformat(),
         "evidence": evidence
