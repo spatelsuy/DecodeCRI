@@ -1,3 +1,4 @@
+#########################################################################################
 import sys
 import os
 from supabase import create_client, Client
@@ -8,8 +9,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import yaml
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Response
-from fastapi import Request
+from fastapi import Response, Request
+from fastapi.responses import JSONResponse
 
 from models import CRIDSGeneral, CRIState, A2TGeneral, AudioProcessingState
 from graph import workflow_a2t_runtime, workflow_t2j_runtime
@@ -19,13 +20,12 @@ from session_store import SESSION_STORE
 from typing import Dict, List, Any, Optional
 from statistics import mean
 import math
-from fastapi.responses import JSONResponse
 import re
 import json
-
-
+#########################################################################################
+#initialize FastAPI
+#
 app = FastAPI(title="Organizer Platform")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,7 +42,7 @@ load_dotenv()
 url: str = os.getenv("SUPABASE_URL")
 key: str = os.getenv("SUPABASE_SERVICE_KEY")
 
-# Initialize the Supabase client
+#Initialize the Supabase client
 supabase: Client = create_client(url, key)
 
 # ----------------------------
@@ -86,10 +86,6 @@ async def transcribe_text(
     return {"status": "success", "user": user_name}
 
 
-
-
-
-
 @app.post("/a2t/transcribe")
 async def transcribe_audio(
     user_name: str = Form(...),      # Reads form text
@@ -97,7 +93,7 @@ async def transcribe_audio(
     file: UploadFile = File(...)     # Reads the raw webm file binary
 ):
     # Your transcription code here
-    print("CLIENT =", user_name)
+    #print("CLIENT =", user_name)
     
     try:
         audio_content = await file.read()
@@ -111,7 +107,7 @@ async def transcribe_audio(
         "transcription_text": None,
         "categorization_json": None
     }
-    print("Filename =", initial_state.get("file_name"))
+    #print("Filename =", initial_state.get("file_name"))
     try:
         # 3. Synchronously invoke the LangGraph pipeline
         # .invoke() processes all node edges sequentially and returns the final updated state dictionary
@@ -130,8 +126,6 @@ async def transcribe_audio(
     
     return {"status": "success", "user": user_name}
 
-
-    
 @app.get("/health_a2t")
 def health():
     return {
