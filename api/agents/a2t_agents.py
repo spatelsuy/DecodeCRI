@@ -45,7 +45,10 @@ Example: "Tomorrow I have a call at 10 AM and a meeting at 3 PM." → both items
 CRITICAL TEMPORAL ISOLATION: Only apply a specific date/time anchor to an item if that specific time token appears directly in the item's time_context from the provided blueprint or explicitly touches it in the text segment. If an action's isolated time_context is null, do not arbitrarily apply neighboring precise time anchors to it.
 
 5. TIME NORMALIZATION
-Resolve all time expressions against "{{CURRENT_DATE}}". Normalize to ISO-8601 datetime strings when date and/or time can be determined. For vague time expressions:
+Resolve all time expressions against "{{CURRENT_DATE}}". Normalize to ISO-8601 datetime strings when date and/or time can be determined. 
+Prefer any pre-resolved value found in linguistic_blueprint.temporal_entities[].resolved_datetime over deriving it yourself —
+only fall back to your own resolution for time expressions not present in that list.
+For vague time expressions:
 - morning → 09:00 | afternoon → 15:00 | after lunch → 14:00 | evening → 18:00 | night → 21:00
 
 6. CATEGORY DISCIPLINE
@@ -86,11 +89,34 @@ CRITICAL: Never generate multiple separate task/event entries for repeating sche
 Understand Hinglish and mixed-language input. Ignore filler words and ASR noise unless they change the meaning. Interpret intent conservatively.
 
 12. LINGUISTIC BLUEPRINT CROSS-REFERENCE
-You will receive a 'linguistic_blueprint' containing pre-extracted actions, targets, and time contexts. 
-EXACT COUNT ALIGNMENT: Your final generated arrays must match the intent boundaries extracted in the blueprint. Every structural action block identified in linguistic_blueprint.detected_actions should produce a corresponding entry in your response. Do not miss or collapse them.
-- Use this blueprint as structural guardrails to ensure you do not miss hidden or nested tasks.
-- If 'is_negated' is true for an action, do not create a standard active task/event for it. Instead, process it as a cancellation or skip condition (e.g., set relevant parameters to null or note the exception).
-- Correct any clear misalignments or leaked context from the blueprint using your advanced language understanding of the raw 'user_speech_transcript'.
+You will receive a 'linguistic_blueprint' JSON object with this shape:
+{
+  "raw_text": string,
+  "current_date": ISO datetime, // matches {{CURRENT_DATE}}; if they ever
+                                // differ, treat {{CURRENT_DATE}} as authoritative
+  "evidence": {
+    "temporal_entities":   [{ "text": string, "resolved_datetime": ISO datetime }],
+    "actions":             [{ "id": int, "verb": string, "text": string,
+                               "subject": string|null, "objects": string[] }],
+    "relationship_hints":  [{ "type": "AFTER"|"BEFORE", "text": string }],
+    "correction_signals":  string[],   // e.g. "actually", "wait", "i mean" — signals
+                                       // the user is self-correcting; when present near
+                                       // an item, prefer the corrected/later phrasing
+    "possible_typos":      [{ "original": string, "suggestion": string }],
+    "entities":            [{ "text": string, "type": string }]
+  }
+}
+
+EXACT COUNT ALIGNMENT: Your final generated arrays must match the intent boundaries implied by evidence.actions. 
+Every action block should map to a corresponding entry in your response (some may merge into one intent per the ATOMIC INTENTS rule; do not silently drop one).
+- Use evidence.actions[].subject/objects as the acting party and target of each intent.
+- Use evidence.relationship_hints to help decide sequencing and populate "related_to".
+- Use evidence.correction_signals to detect self-corrected statements — prefer the corrected version and do not create a duplicate item for the discarded phrasing.
+- Use evidence.possible_typos to silently correct obvious ASR errors in titles/notes.
+- This blueprint currently does NOT flag negation. Detect cancellations, "never mind", "skip that", or negated actions directly from user_speech_transcript using your own language understanding, and do not create a standard active task/event for them.
+- Correct any clear misalignments or leaked context from the blueprint using your advanced language understanding of the raw user_speech_transcript.
+
+
 
 Titles must be concise and intent-driven. Preserve the user's real meaning. Store supporting detail in context or notes, not in the title.
 Now process the spoken text and return only the final JSON object.
