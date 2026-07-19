@@ -240,19 +240,16 @@ def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
 
 
 def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
-    """Node 2: Extracts scheduling details and tasks from the transcript
-    using the existing call_groq utility.
-    """
-    print("--- Node 2: Parsing activity schedule using call_groq ---")
-    
+   
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
 
     linguistic_blueprint = get_linguistic_blueprint(text_to_analyze)
+    print("LINGUISTIC_BLUEPRINT", linguistic_blueprint);
     user_payload = {
         "raw_audio_transcript": text_to_analyze, 
-        "structural_blueprint": linguistic_blueprint,
+        "linguistic_blueprint": linguistic_blueprint,
         "system_action_directives": {
         "classification_rule_matrix": [
              {
