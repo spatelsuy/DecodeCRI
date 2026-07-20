@@ -49,11 +49,11 @@ workflow_a2t_runtime = workflow_a2t.compile()
 
 workflow_t2j = StateGraph(AudioProcessingState)
 workflow_t2j.add_node("categorize_text", categorize_text)
-#workflow_t2j.add_node("categorize_validation", categorize_validation)
+workflow_t2j.add_node("categorize_validation", categorize_validation)
 
 # Establish the sequential dependency pipeline
 workflow_t2j.set_entry_point("categorize_text")
-#workflow_t2j.add_edge("categorize_text", "categorize_validation")
+workflow_t2j.add_edge("categorize_text", "categorize_validation")
 
 workflow_t2j_runtime = workflow_t2j.compile()
 
