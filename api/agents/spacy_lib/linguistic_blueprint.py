@@ -34,6 +34,77 @@ _NUMBER_WORD_RE = re.compile(
 def _is_number_token(tok):
     return tok.like_num or bool(_NUMBER_WORD_RE.match(tok.text))
 
+_CORRECTION_MARKERS = [
+    "no no",
+    "actually",
+    "instead",
+    "wait",
+    "correction",
+    "i mean"
+]
+
+def _find_correction_markers(raw_text):
+    """
+    Returns every correction-marker occurrence in raw_text with its
+    character span, e.g. [{"text": "actually", "start_char": 19,
+    "end_char": 27}]. Single source of truth shared by
+    CorrectionAnalyzer and EntityAnalyzer so both agree on where
+    corrections happen instead of each re-deriving it separately.
+    """
+    markers = []
+    lower = raw_text.lower()
+    for marker in _CORRECTION_MARKERS:
+        start = 0
+        while True:
+            idx = lower.find(marker, start)
+            if idx == -1:
+                break
+            markers.append({
+                "text": marker,
+                "start_char": idx,
+                "end_char": idx + len(marker)
+            })
+            start = idx + len(marker)
+    return markers
+ 
+ 
+def _earliest_marker(markers):
+    """
+    Given markers already filtered to one sentence, returns the
+    earliest one. Only the first marker in a sentence acts as the
+    correction pivot -- a later marker (e.g. "instead" reinforcing an
+    already-corrected value) must not re-flag the corrected value
+    itself as superseded.
+    """
+    return min(markers, key=lambda m: m["start_char"]) if markers else None
+ 
+ 
+# Phrases that signal "what follows is a date", used to safely accept
+# a bare N/N numeric pattern as a date rather than a fraction/score/
+# ratio (e.g. "1/2 cup", "the score was 7/20"). Longer/more specific
+# phrases first so a substring match like "by" inside "due by" doesn't
+# fire before the fuller phrase is checked.
+_DATE_ANCHOR_PHRASES = [
+    "week of", "weeks of",
+    "due by", "due on", "due before",
+    "before", "after", "since", "until", "from",
+    "by", "on",
+]
+ 
+_DATE_SLASH_RE = re.compile(
+    r"\b(1[0-2]|0?[1-9])/(3[01]|[12]\d|0?[1-9])(?:/\d{2,4})?\b"
+)
+ 
+ 
+def _has_date_anchor_before(raw_text, match_start, window=20):
+    """
+    True if one of _DATE_ANCHOR_PHRASES appears immediately (allowing
+    trailing whitespace) before match_start. Prevents an N/N pattern
+    from being treated as a date with no supporting context.
+    """
+    prefix = raw_text[max(0, match_start - window):match_start].lower().rstrip()
+    return any(prefix.endswith(phrase) for phrase in _DATE_ANCHOR_PHRASES)
+ 
 
 # LINGUISTIC CONTEXT
 class LinguisticContext:
@@ -42,29 +113,27 @@ class LinguisticContext:
     parsed Doc per raw_text. All analyzers share that single Doc,
     instead of each analyzer re-running nlp(text) on its own.
     """
-
+ 
     def __init__(self, model_name="en_core_web_sm", debug=False):
         self.nlp = spacy.load(model_name)
         self.debug = debug
-
+ 
     def parse(self, raw_text):
-        print("DEBUG = ", self.debug)
         doc = self.nlp(raw_text)
         if self.debug:
             self._print_debug(doc)
         return doc
-
+ 
     @staticmethod
     def _print_debug(doc):
-        
         print("=" * 100)
         print("FULL TEXT:", repr(doc.text))
         print("=" * 100)
-
+ 
         print("\n--- sentences (doc.sents) ---")
         for i, sent in enumerate(doc.sents):
             print(i, repr(sent.text))
-
+ 
         print("\n--- tokens (full attributes) ---")
         header = (
             f"{'i':<4}{'text':<12}{'lemma_':<12}{'pos_':<8}{'tag_':<8}{'dep_':<12}"
@@ -79,11 +148,11 @@ class LinguisticContext:
                 f"{tok.dep_:<12}{tok.head.text:<12}{tok.ent_type_:<10}{tok.ent_iob_:<10}"
                 f"{str(tok.is_stop):<9}{str(tok.is_alpha):<9}{str(tok.is_punct):<9}{tok.shape_:<10}"
             )
-
+ 
         print("\n--- noun chunks (doc.noun_chunks) ---")
         for chunk in doc.noun_chunks:
             print(repr(chunk.text), "-> root:", repr(chunk.root.text))
-
+ 
         print("\n--- named entities (doc.ents) ---")
         for ent in doc.ents:
             prev = doc[ent.start - 1].text if ent.start > 0 else None
@@ -115,25 +184,56 @@ class TemporalAnalyzer(BaseAnalyzer):
     dateparser.parse. This avoids the free-form phrase-boundary
     bugs in dateparser.search_dates, which can slurp in unrelated
     words (e.g. "at 11am after the") and misread them as dates.
+ 
+    spaCy's statistical NER occasionally mislabels clear clock-time
+    expressions as something other than DATE/TIME (observed: "10am"
+    tagged QUANTITY) which silently drops them from the DATE/TIME-only
+    scan above. A regex fallback recovers any clock-time pattern in
+    the raw text that NER missed. It also re-clips TIME spans that
+    NER over-extended into adjacent, unrelated words (observed:
+    "9am PST Hari" merged a person's name into the time span).
     """
     key = "temporal_entities"
-
+ 
+    # Matches clock times like "9am", "10 pm", "11:30am", "9 a.m." —
+    # used both to recover entities spaCy's NER mislabels, and to
+    # re-clip NER spans that swallow adjacent non-time words. Hour is
+    # constrained to 1-12 (valid 12-hour clock range) and minutes to
+    # 00-59, so invalid strings like "13am" or "3:65am" (which the
+    # unconstrained \d{1,2} version used to match) are correctly
+    # rejected rather than passed through to dateparser.
+    _CLOCK_TIME_RE = re.compile(
+        r"\b(1[0-2]|[1-9])(?::([0-5]\d))?\s?(a\.?m\.?|p\.?m\.?)\b", re.IGNORECASE
+    )
+ 
     def __init__(self, base_date=None):
         # Resolved once per analyzer instance. generate_blueprint()
         # always passes the current call's timestamp explicitly, so
         # this fallback only matters if the analyzer is used standalone.
         self.base_date = base_date or datetime.now()
-
+ 
+    def _resolve(self, raw):
+        return dateparser.parse(
+            raw,
+            settings={
+                "RELATIVE_BASE": self.base_date,
+                "PREFER_DATES_FROM": "future",
+                "RETURN_AS_TIMEZONE_AWARE": False,
+            }
+        )
+ 
     def analyze(self, doc, raw_text):
         temporal_entities = []
         seen = set()
+        ner_char_spans = []  # (start_char, end_char) already consumed by NER pass
+ 
         for ent in doc.ents:
             if ent.label_ not in ("DATE", "TIME"):
                 continue
-
+ 
             raw = ent.text.strip()
             lower = raw.lower()
-
+ 
             # Reject bare unit words ("minutes", "days", ...) unless a
             # number actually precedes them, e.g. "30 minutes" is fine
             # but "meeting minutes" is not a duration at all.
@@ -141,33 +241,85 @@ class TemporalAnalyzer(BaseAnalyzer):
                 prev_tok = doc[ent.start - 1] if ent.start > 0 else None
                 if prev_tok is None or not _is_number_token(prev_tok):
                     continue
-
-            dt = dateparser.parse(
-                raw,
-                settings={
-                    "RELATIVE_BASE": self.base_date,
-                    "PREFER_DATES_FROM": "future",
-                    "RETURN_AS_TIMEZONE_AWARE": False,
-                }
-            )
+ 
+            # If this is a TIME entity but NER over-extended the span
+            # to include non-time words (e.g. "9am PST Hari"), re-clip
+            # it down to just the clock-time pattern.
+            clock_match = self._CLOCK_TIME_RE.search(raw)
+            if ent.label_ == "TIME" and clock_match and clock_match.group() != raw:
+                raw = clock_match.group()
+                lower = raw.lower()
+ 
+            ner_char_spans.append((ent.start_char, ent.end_char))
+ 
+            dt = self._resolve(raw)
             if dt is None:
                 continue
-
-            key = (lower, dt.isoformat())
-            if key in seen:
+ 
+            dedup_key = (lower, dt.isoformat())
+            if dedup_key in seen:
                 continue
-            seen.add(key)
+            seen.add(dedup_key)
+            temporal_entities.append({
+                "text": raw,
+                "resolved_datetime": dt.isoformat()
+            })
+ 
+        # Regex fallback: recover clock-time expressions NER missed
+        # entirely (mislabeled as something other than DATE/TIME).
+        for m in self._CLOCK_TIME_RE.finditer(raw_text):
+            span = (m.start(), m.end())
+            if any(span[0] < e and s < span[1] for s, e in ner_char_spans):
+                continue  # already covered by the NER pass above
+ 
+            raw = m.group()
+            lower = raw.lower()
+            dt = self._resolve(raw)
+            if dt is None:
+                continue
+ 
+            dedup_key = (lower, dt.isoformat())
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
+            temporal_entities.append({
+                "text": raw,
+                "resolved_datetime": dt.isoformat()
+            })
+ 
+        # Regex fallback #2: recover slash-format dates (e.g. "7/20",
+        # "7/20/2026") that NER mislabeled as CARDINAL. Guarded by a
+        # preceding date-anchor phrase ("week of", "due by", "on", ...)
+        # so a fraction like "1/2 cup" or a score like "7/20" in an
+        # unrelated context is not misread as a date.
+        for m in _DATE_SLASH_RE.finditer(raw_text):
+            span = (m.start(), m.end())
+            if any(span[0] < e and s < span[1] for s, e in ner_char_spans):
+                continue  # already covered by an earlier pass
+            if not _has_date_anchor_before(raw_text, m.start()):
+                continue  # no date context -- likely a fraction/score/ratio
+ 
+            raw = m.group()
+            lower = raw.lower()
+            dt = self._resolve(raw)
+            if dt is None:
+                continue
+ 
+            dedup_key = (lower, dt.isoformat())
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
             temporal_entities.append({
                 "text": raw,
                 "resolved_datetime": dt.isoformat()
             })
         return temporal_entities
-
+ 
 
 class ActionAnalyzer(BaseAnalyzer):
     key = "actions"
     _IGNORED_VERBS = {"be", "have", "do"}
-
+ 
     def analyze(self, doc, raw_text):
         actions = []
         action_id = 1
@@ -177,19 +329,19 @@ class ActionAnalyzer(BaseAnalyzer):
             lemma = token.lemma_.lower()
             if lemma in self._IGNORED_VERBS:
                 continue
-
+ 
             # subject extraction
             subject = None
             for child in token.children:
                 if child.dep_ in ("nsubj", "nsubjpass"):
                     subject = child.text
-
+ 
             # object extraction
             objects = []
             for child in token.children:
                 if child.dep_ in ("dobj", "pobj", "attr", "dative"):
                     objects.append(child.text)
-
+ 
             actions.append({
                 "id": action_id,
                 "verb": lemma,
@@ -199,7 +351,7 @@ class ActionAnalyzer(BaseAnalyzer):
             })
             action_id += 1
         return actions
-
+ 
 
 class RelationshipAnalyzer(BaseAnalyzer):
     key = "relationship_hints"
@@ -207,7 +359,7 @@ class RelationshipAnalyzer(BaseAnalyzer):
         "AFTER": ["after", "once done"],
         "BEFORE": ["before", "prior to"],
     }
-
+ 
     def analyze(self, doc, raw_text):
         hints = []
         lower = raw_text.lower()
@@ -219,35 +371,30 @@ class RelationshipAnalyzer(BaseAnalyzer):
                         "text": p
                     })
         return hints
-
-
+ 
+ 
 class CorrectionAnalyzer(BaseAnalyzer):
+    """
+    Returns every correction marker with its character span, e.g.
+    "actually" at [19, 27), instead of a bare list of marker strings.
+    The span lets EntityAnalyzer (and, if extended later,
+    TemporalAnalyzer/ActionAnalyzer) determine which specific items
+    a correction applies to, rather than just knowing a correction
+    happened somewhere in the text.
+    """
     key = "correction_signals"
-    _MARKERS = [
-        "no no",
-        "actually",
-        "instead",
-        "wait",
-        "correction",
-        "i mean"
-    ]
-
+ 
     def analyze(self, doc, raw_text):
-        found = []
-        lower = raw_text.lower()
-        for marker in self._MARKERS:
-            if marker in lower:
-                found.append(marker)
-        return found
-
-
+        return _find_correction_markers(raw_text)
+ 
+ 
 class TypoAnalyzer(BaseAnalyzer):
     key = "possible_typos"
     _TYPO_RULES = {
         "meeitng": "meeting",
         "sent": "send"
     }
-
+ 
     def analyze(self, doc, raw_text):
         typos = []
         lower = raw_text.lower()
@@ -258,21 +405,65 @@ class TypoAnalyzer(BaseAnalyzer):
                     "suggestion": correct
                 })
         return typos
-
-
+ 
+ 
 class EntityAnalyzer(BaseAnalyzer):
+    """
+    Emits every spaCy entity, plus two independent sets of flags:
+ 
+    1. "possibly_superseded" / "correction_marker" -- true when the
+       entity appears before a correction marker (e.g. "actually",
+       "wait") in the same sentence, meaning the USER verbally
+       replaced this value. e.g. in "meet at 3pm, actually make it
+       4pm", "3pm" is flagged True. Downstream: discard/replace.
+ 
+    2. "possibly_mislabeled" / "suggested_type" -- true when spaCy's
+       NER gave this entity the wrong label (e.g. tagged "10am" as
+       QUANTITY, or "7/20" as CARDINAL, instead of TIME/DATE). This is
+       an NER accuracy issue, unrelated to anything the user said.
+       Downstream: KEEP the value, just trust suggested_type over the
+       raw "type" field -- do not treat this like a correction.
+ 
+    These two flag-pairs are deliberately separate. A value can be
+    mislabeled without being corrected, or corrected without being
+    mislabeled; conflating them into one flag would tell the LLM to
+    discard values (mislabeled) that should actually be kept.
+    """
     key = "entities"
-
+ 
     def analyze(self, doc, raw_text):
+        markers = _find_correction_markers(raw_text)
+ 
         entities = []
         for ent in doc.ents:
+            sent = ent.sent
+            same_sent_markers = [
+                m for m in markers
+                if sent.start_char <= m["start_char"] < sent.end_char
+            ]
+            pivot = _earliest_marker(same_sent_markers)
+            possibly_superseded = pivot is not None and ent.end_char <= pivot["start_char"]
+ 
+            possibly_mislabeled = False
+            suggested_type = None
+            if ent.label_ not in ("DATE", "TIME"):
+                if TemporalAnalyzer._CLOCK_TIME_RE.fullmatch(ent.text.strip()):
+                    possibly_mislabeled = True
+                    suggested_type = "TIME"
+                elif _DATE_SLASH_RE.fullmatch(ent.text.strip()) and _has_date_anchor_before(raw_text, ent.start_char):
+                    possibly_mislabeled = True
+                    suggested_type = "DATE"
+ 
             entities.append({
                 "text": ent.text,
-                "type": ent.label_
+                "type": ent.label_,
+                "possibly_superseded": possibly_superseded,
+                "correction_marker": pivot["text"] if possibly_superseded else None,
+                "possibly_mislabeled": possibly_mislabeled,
+                "suggested_type": suggested_type
             })
         return entities
-
-
+ 
 # MAIN BLUEPRINT GENERATOR
 def _default_analyzers(base_date):
     return [
