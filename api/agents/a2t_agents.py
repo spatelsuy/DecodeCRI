@@ -75,6 +75,13 @@ If an item overlaps multiple categories, you MUST resolve it using this strict l
 6a.3. FORCE TO 'TASKS' if the action is an independent, non-interactive, execution-based chore, deliverable, or to-do, even if it has a target time window or general date constraint.
    - Example: "I need to prepare the complexity score tonight" → TASK.
 
+6a.4. RECURRING ROUTINE TIEBREAK: For a recurring, non-social, self-directed commitment (commute, arrival time, daily routine) that could plausibly fit either 6a.2 or 6a.3, classify as TASKS. Reserve EVENTS for occurrences that
+are either one-time, or socially anchored (a meeting, a call, a visit involving another named person).
+   - Example: "I need to reach office by 8am every day this week" → TASK
+     (recurring, solo routine).
+   - Example: "I need to go to office at 9am with Hari" → EVENT (one-time,
+     names another person).
+
 7. LINKING
 If one item depends on or refers to another, set "related_to" to the exact title string of the parent item.
 
