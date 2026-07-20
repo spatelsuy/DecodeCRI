@@ -1,7 +1,6 @@
 import sys
 import os
 
-
 import spacy
 
 import yaml
@@ -17,6 +16,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from spacy_lib.linguistic_blueprint import generate_blueprint
+from date_cross_check import check_item_dates 
 
 A2T_PROMPT = """
 You are an intelligent assistant that converts raw spoken text into structured personal organization data.
@@ -250,21 +250,20 @@ def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
         return {"transcription_text": f"Error during transcription: {str(e)}"}
 
 
+
 def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
-   
+ 
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
-
-    #linguistic_blueprint = get_linguistic_blueprint(text_to_analyze)
+ 
     linguistic_blueprint = generate_blueprint(text_to_analyze)
     print("LINGUISTIC_BLUEPRINT", linguistic_blueprint)
     user_payload = {
         "linguistic_blueprint": linguistic_blueprint
     }
-    
+ 
     try:
-      # Call your existing function using a smart, large context model
       today_date = datetime.today().strftime('%Y-%m-%d')
       client_time = state["client_time"]
       final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', client_time)
@@ -273,37 +272,49 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         user_payload=user_payload,
         model="openai/gpt-oss-120b"
       )
-      # This will be a standard Python dictionary containing the organized structure
-      print("\n===============categorization_json============\n", analysis_result);
-      return {"categorization_json": analysis_result}
-        
+      print("\n===============categorization_json============\n", analysis_result)
+ 
+      # CHANGED: also persist linguistic_blueprint in state so
+      # categorize_validation can read it back later -- it needs the
+      # same blueprint to run the deterministic date check.
+      return {
+          "categorization_json": analysis_result,
+          "linguistic_blueprint": linguistic_blueprint
+      }
+ 
     except Exception as e:
       print(f"Categorization Node Error: {e}")
       return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
 
 
 
+
 def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
-    """Node 2: Vaidate the extracted JSON.
-    """
+    """Node 2: Validate the extracted JSON."""
     print("--- Node 2: Validate extraction")
-    
+ 
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
       return {"categorization_json": {"error": "No valid text to validate"}}
-
+ 
     json_to_analyze = state.get("categorization_json", "")
-    print("json_to_analyze=======\n", json_to_analyze);
-    if not json_to_analyze or "Error during transcription" in json_to_analyze:
-      return {"categorization_json": {"error": "No valid text to validate"}} 
-    
+    print("json_to_analyze=======\n", json_to_analyze)
+ 
+    # CHANGED: json_to_analyze is a dict, so `in` was checking dict
+    # KEYS, not error text -- this never actually caught a failure.
+    # Use .get("error") instead.
+    if not json_to_analyze or json_to_analyze.get("error"):
+      return {"categorization_json": {"error": "No valid text to validate"}}
+ 
+    # NEW: read back the blueprint saved by categorize_text
+    linguistic_blueprint = state.get("linguistic_blueprint", {})
+ 
     user_payload = {
-      "user_speech_transcript": text_to_analyze, 
+      "user_speech_transcript": text_to_analyze,
       "extracted_json": json_to_analyze
     }
-    
+ 
     try:
-      # Call your existing function using a smart, large context model
       today_date = datetime.today().strftime('%Y-%m-%d')
       client_time = state["client_time"]
       dt_obj = datetime.strptime(client_time, '%Y-%m-%d')
@@ -316,13 +327,22 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
         model="openai/gpt-oss-120b"
       )
       print_json_diff(json_to_analyze, analysis_result)
-      # This will be a standard Python dictionary containing the organized structure
-      return {"categorization_json": analysis_result}
-        
+ 
+      # NEW: deterministic check on the audit pass's OWN output --
+      # this is where the fabricated "Reach office" datetime actually
+      # came from, so we check the result of THIS call, not the input.
+      date_warnings = check_item_dates(analysis_result, linguistic_blueprint)
+      if date_warnings:
+          print("DATE VALIDATION WARNINGS:", date_warnings)
+ 
+      return {
+          "categorization_json": analysis_result,
+          "date_warnings": date_warnings  # NEW: optional, for logging/UI/retry later
+      }
+ 
     except Exception as e:
       print(f"Categorization Node Error: {e}")
       return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
-
 
 def print_json_diff(before_dict, after_dict):
     # Convert both dictionaries to pretty-printed, sorted JSON strings
