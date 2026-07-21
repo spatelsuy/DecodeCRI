@@ -109,8 +109,9 @@ You will receive a 'linguistic_blueprint' JSON object with this shape:
                                 // differ, treat {{CURRENT_DATE}} as authoritative
   "evidence": {
     "temporal_entities":   [{ "text": string, "resolved_datetime": ISO datetime }],
-    "actions":             [{ "id": int, "verb": string, "text": string,
-                               "subject": string|null, "objects": string[] }],
+    "actions": [{ "id": int, "verb": string, "text": string,
+                 "subject": string|null, "objects": string[],
+                 "sentence": string, "related_entities": [{"text": string, "type": string}] }],
     "relationship_hints":  [{ "type": "AFTER"|"BEFORE", "text": string }],
     "correction_signals":  [{ "text": string, "start_char": int, "end_char": int }],
     "possible_typos":      [{ "original": string, "suggestion": string }],
@@ -122,6 +123,8 @@ You will receive a 'linguistic_blueprint' JSON object with this shape:
 EXACT COUNT ALIGNMENT: Your final generated arrays must match the intent boundaries implied by evidence.actions.
 Every action block should map to a corresponding entry in your response (some may merge into one intent per the ATOMIC INTENTS rule; do not silently drop one).
 - Use evidence.actions[].subject/objects as the acting party and target of each intent.
+- Use evidence.actions[].sentence and evidence.actions[].related_entities to populate the "context" field. Do not leave "context" null if related_entities contains anything not already reflected in the item's title (e.g. a person's name, a related meeting, a
+  location) -- summarize that supporting detail briefly. Only leave "context" null if there is genuinely nothing beyond the title.
 - Use evidence.relationship_hints to help decide sequencing and populate "related_to".
 - Use evidence.correction_signals to detect self-corrected statements — prefer the corrected version and do not create a duplicate item for the discarded phrasing.
 - Use evidence.possible_typos to silently correct obvious ASR errors in titles/notes.
