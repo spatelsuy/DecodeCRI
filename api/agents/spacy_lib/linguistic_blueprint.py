@@ -1,16 +1,19 @@
 # ==========================================================
 # GENERIC EVIDENCE BLUEPRINT GENERATOR
 # ==========================================================
+#
 # INSTALL:
+#
 # pip install spacy dateparser
 # python -m spacy download en_core_web_sm
+#
 # ==========================================================
 import json
 import re
 from datetime import datetime
 import spacy
 import dateparser
-
+ 
 # ==========================================================
 # CONFIG
 # ==========================================================
@@ -26,14 +29,15 @@ _GENERIC_UNIT_WORDS = {
     "month", "months",
     "year", "years",
 }
-
 _NUMBER_WORD_RE = re.compile(
     r"^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+)$", re.IGNORECASE
 )
-
+ 
+ 
 def _is_number_token(tok):
     return tok.like_num or bool(_NUMBER_WORD_RE.match(tok.text))
-
+ 
+ 
 _CORRECTION_MARKERS = [
     "no no",
     "actually",
@@ -42,7 +46,8 @@ _CORRECTION_MARKERS = [
     "correction",
     "i mean"
 ]
-
+ 
+ 
 def _find_correction_markers(raw_text):
     """
     Returns every correction-marker occurrence in raw_text with its
@@ -105,8 +110,10 @@ def _has_date_anchor_before(raw_text, match_start, window=20):
     prefix = raw_text[max(0, match_start - window):match_start].lower().rstrip()
     return any(prefix.endswith(phrase) for phrase in _DATE_ANCHOR_PHRASES)
  
-
+ 
+# ==========================================================
 # LINGUISTIC CONTEXT
+# ==========================================================
 class LinguisticContext:
     """
     Owns the spaCy pipeline. Loads the model once, and produces one
@@ -158,8 +165,8 @@ class LinguisticContext:
             prev = doc[ent.start - 1].text if ent.start > 0 else None
             print(f"{ent.text!r:25} label={ent.label_:8} start={ent.start} end={ent.end} prev_token={prev!r}")
         print("=" * 100 + "\n")
-
-
+ 
+ 
 # ==========================================================
 # ANALYZER INTERFACE
 # ==========================================================
@@ -173,10 +180,11 @@ class BaseAnalyzer:
     else has to change.
     """
     key = None
-
+ 
     def analyze(self, doc, raw_text):
         raise NotImplementedError
-
+ 
+ 
 class TemporalAnalyzer(BaseAnalyzer):
     """
     Uses spaCy's DATE/TIME entity spans (reliable boundaries) as
@@ -315,8 +323,22 @@ class TemporalAnalyzer(BaseAnalyzer):
             })
         return temporal_entities
  
-
+ 
 class ActionAnalyzer(BaseAnalyzer):
+    """
+    Emits verbs with their subject/objects, plus two additions meant
+    to give a downstream LLM real material to populate a "context"
+    field with, instead of leaving it null:
+ 
+    - "sentence": the full sentence containing this action, so
+      supporting detail outside the verb's direct syntactic children
+      (e.g. "with Hari", "which is at 11am") is visible per-action,
+      not just buried in the raw transcript.
+    - "related_entities": named entities in that same sentence that
+      aren't already captured as subject/objects -- concrete
+      candidates for what "context" should contain (a name, a
+      related meeting, a location, etc).
+    """
     key = "actions"
     _IGNORED_VERBS = {"be", "have", "do"}
  
@@ -342,17 +364,28 @@ class ActionAnalyzer(BaseAnalyzer):
                 if child.dep_ in ("dobj", "pobj", "attr", "dative"):
                     objects.append(child.text)
  
+            sent = token.sent
+            already_captured = {(subject or "").lower()} | {o.lower() for o in objects}
+            related_entities = [
+                {"text": ent.text, "type": ent.label_}
+                for ent in doc.ents
+                if sent.start_char <= ent.start_char < sent.end_char
+                and ent.text.lower() not in already_captured
+            ]
+ 
             actions.append({
                 "id": action_id,
                 "verb": lemma,
                 "text": token.text,
                 "subject": subject,
-                "objects": objects
+                "objects": objects,
+                "sentence": sent.text.strip(),
+                "related_entities": related_entities
             })
             action_id += 1
         return actions
  
-
+ 
 class RelationshipAnalyzer(BaseAnalyzer):
     key = "relationship_hints"
     _PATTERNS = {
@@ -463,7 +496,7 @@ class EntityAnalyzer(BaseAnalyzer):
                 "suggested_type": suggested_type
             })
         return entities
- 
+
 # MAIN BLUEPRINT GENERATOR
 def _default_analyzers(base_date):
     return [
