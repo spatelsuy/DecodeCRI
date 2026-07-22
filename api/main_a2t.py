@@ -13,7 +13,7 @@ from fastapi import Response, Request
 from fastapi.responses import JSONResponse
 
 from models import CRIDSGeneral, CRIState, A2TGeneral, AudioProcessingState
-from graph import workflow_a2t_runtime, workflow_t2j_runtime
+from graph import workflow_a2t_runtime, workflow_t2j_runtime, workflow_transcribe_only_runtime
 
 from session_store import SESSION_STORE
 
@@ -79,6 +79,43 @@ async def transcribe_text(
             "user": final_state.get("user_name"),
             "transcription": final_state.get("transcription_text"),
             "analysis": final_state.get("categorization_json")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Graph Execution Failed: {str(e)}")
+    
+    return {"status": "success", "user": user_name}
+
+
+@app.post("/a2t/transcribe_only")
+async def transcribe_audio(
+    user_name: str = Form(...),      # Reads form text
+    client_time: str = Form(...),
+    file: UploadFile = File(...)     # Reads the raw webm file binary
+):
+    # Your transcription code here
+    print("TRANSCRIBE ONLY")
+    
+    try:
+        audio_content = await file.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not read upload file: {str(e)}")
+    initial_state: AudioProcessingState = {
+        "user_name": user_name,
+        "client_time": client_time,
+        "file_bytes": audio_content,
+        "file_name": file.filename or "recording.webm",
+        "transcription_text": None,
+        "categorization_json": None
+    }
+    try:
+        print("INVOKING TRANSCRIBE ONLY GRAPH")
+        final_state = workflow_transcribe_only_runtime.invoke(initial_state)
+        print("INVOKED TRANSCRIBE ONLY GRAPH")
+        return {
+            "status": "success",
+            "user": final_state.get("user_name"),
+            "transcription": final_state.get("transcription_text"),
+            "analysis": ""
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Graph Execution Failed: {str(e)}")
