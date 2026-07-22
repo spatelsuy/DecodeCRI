@@ -31,7 +31,7 @@ cri_ds_decodeClassify_runtime = cri_decodeclassify_graph.compile()
 
 
 
-
+#Audio to Text to Categorization
 workflow_a2t = StateGraph(AudioProcessingState)
 
 # Add our two structural nodes
@@ -39,22 +39,27 @@ workflow_a2t.add_node("transcribe_audio_text", transcribe_audio_text)
 workflow_a2t.add_node("categorize_text", categorize_text)
 workflow_a2t.add_node("categorize_validation", categorize_validation)
 
-# Establish the sequential dependency pipeline
 workflow_a2t.set_entry_point("transcribe_audio_text")
 workflow_a2t.add_edge("transcribe_audio_text", "categorize_text")
 workflow_a2t.add_edge("categorize_text", "categorize_validation")
 
 workflow_a2t_runtime = workflow_a2t.compile()
 
-
+#TEXT TO CATEGORIZATION
 workflow_t2j = StateGraph(AudioProcessingState)
 workflow_t2j.add_node("categorize_text", categorize_text)
 workflow_t2j.add_node("categorize_validation", categorize_validation)
 
-# Establish the sequential dependency pipeline
 workflow_t2j.set_entry_point("categorize_text")
 workflow_t2j.add_edge("categorize_text", "categorize_validation")
 
 workflow_t2j_runtime = workflow_t2j.compile()
+
+#tRANSCRIBE ONLY 
+workflow_transcribe_only_runtime = StateGraph(AudioProcessingState)
+workflow_transcribe_only_runtime.add_node("transcribe_audio_text", transcribe_audio_text)
+
+workflow_transcribe_only_runtime.set_entry_point("transcribe_audio_text")
+workflow_transcribe_only_runtime = workflow_t2j.compile()
 
 
