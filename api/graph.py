@@ -56,10 +56,10 @@ workflow_t2j.add_edge("categorize_text", "categorize_validation")
 workflow_t2j_runtime = workflow_t2j.compile()
 
 #tRANSCRIBE ONLY 
-workflow_transcribe_only_runtime = StateGraph(AudioProcessingState)
-workflow_transcribe_only_runtime.add_node("transcribe_audio_text", transcribe_audio_text)
+workflow_transcribe_only = StateGraph(AudioProcessingState)
+workflow_transcribe_only.add_node("transcribe_audio_text", transcribe_audio_text)
 
-workflow_transcribe_only_runtime.set_entry_point("transcribe_audio_text")
-workflow_transcribe_only_runtime = workflow_t2j.compile()
+workflow_transcribe_only.set_entry_point("transcribe_audio_text")
+workflow_transcribe_only_runtime = workflow_transcribe_only.compile()
 
 
