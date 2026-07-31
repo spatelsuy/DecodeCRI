@@ -206,6 +206,64 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
         raise RuntimeError("PROMPT_GROQ_KEY not found in environment variables")
 
     print("\nTRANSCRIPTION MODEL === ", model)
+
+    data = {
+        "model": model,
+        "temperature": "0.0",
+        "response_format": "verbose_json"   # <-- changed from "json"
+    }
+    files = {
+        "file": (file_name, file_bytes, "audio/webm")
+    }
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}"
+    }
+
+    response = requests.post(
+        GROQ_TRANSCRIPTION_URL,
+        headers=headers,
+        data=data,
+        files=files,
+        timeout=60
+    )
+    if response.status_code != 200:
+        raise Exception(f"Groq Transcription API error: {response.text}")
+
+    result = response.json()
+    segments = result.get("segments", [])
+
+    if not segments:
+        # fallback in case API doesn't return segments for very short clips
+        return result.get("text", "").strip()
+
+    # Filter out likely-hallucinated / silence segments
+    NO_SPEECH_THRESHOLD = 0.6
+    LOGPROB_THRESHOLD = -1.0
+
+    kept_text = []
+    for seg in segments:
+        no_speech_prob = seg.get("no_speech_prob", 0.0)
+        avg_logprob = seg.get("avg_logprob", 0.0)
+
+        if no_speech_prob > NO_SPEECH_THRESHOLD or avg_logprob < LOGPROB_THRESHOLD:
+            print(f"Dropping likely hallucinated segment: '{seg.get('text','').strip()}' "
+                  f"(no_speech_prob={no_speech_prob:.2f}, avg_logprob={avg_logprob:.2f})")
+            continue
+
+        kept_text.append(seg.get("text", "").strip())
+
+    return " ".join(kept_text).strip()
+
+
+
+
+
+def call_groq_transcribe_old(file_bytes: bytes, file_name: str = "recording.webm", model: str = "whisper-large-v3") -> str:
+    GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
+    if not GROQ_API_KEY:
+        raise RuntimeError("PROMPT_GROQ_KEY not found in environment variables")
+
+    print("\nTRANSCRIPTION MODEL === ", model)
     data = {
         "model": model,
         "temperature": "0.0", # Groq expects a string or float representation
