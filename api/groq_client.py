@@ -242,6 +242,8 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
 
     kept_text = []
     for seg in segments:
+        print("THE SEGMENT=")
+        print(json.dumps(seg, indent=2))
         no_speech_prob = seg.get("no_speech_prob", 0.0)
         avg_logprob = seg.get("avg_logprob", 0.0)
 
