@@ -247,6 +247,7 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
         print(json.dumps(seg, indent=2))
         no_speech_prob = seg.get("no_speech_prob", 0.0)
         avg_logprob = seg.get("avg_logprob", 0.0)
+        temperature = seg.get("temperature", 0.0)
 
         if (no_speech_prob > NO_SPEECH_THRESHOLD
                 or avg_logprob < LOGPROB_THRESHOLD
