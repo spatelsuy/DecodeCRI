@@ -210,7 +210,8 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
     data = {
         "model": model,
         "temperature": "0.0",
-        "response_format": "verbose_json"   # <-- changed from "json"
+        "response_format": "verbose_json",   # <-- changed from "json"
+        "language": "en"
     }
     files = {
         "file": (file_name, file_bytes, "audio/webm")
