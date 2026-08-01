@@ -197,6 +197,15 @@ def call_groq(system_prompt: str, user_payload: Dict[str, Any], model="llama-3.1
     return parsed
 
 
+HALLUCINATION_PHRASES = {
+    "thank you", "thank you.", "thanks for watching", "please subscribe",
+    "bye", "bye bye", "see you next time", "thanks", "okay", "hi",
+}
+
+def is_likely_hallucination_phrase(text: str) -> bool:
+    cleaned = text.strip().lower().strip(".,!?")
+    return cleaned in HALLUCINATION_PHRASES
+
 # The endpoint for Groq's transcriptions follows the OpenAI structure
 GROQ_TRANSCRIPTION_URL = "https://api.groq.com/openai/v1/audio/transcriptions"
 
@@ -238,7 +247,7 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
         return result.get("text", "").strip()
 
     # Filter out likely-hallucinated / silence segments
-    NO_SPEECH_THRESHOLD = 0.15
+    NO_SPEECH_THRESHOLD = 0.3
     LOGPROB_THRESHOLD = -1.0
     TEMPERATURE_THRESHOLD = 0.0  # if Whisper needed to raise temperature at all, treat with suspicion
     
@@ -249,20 +258,15 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
         no_speech_prob = seg.get("no_speech_prob", 0.0)
         avg_logprob = seg.get("avg_logprob", 0.0)
         temperature = seg.get("temperature", 0.0)
+        text = seg.get("text", "").strip()
+        
+        is_filler = is_likely_hallucination_phrase(text)
+        if (is_filler and no_speech_prob > 0.15) or no_speech_prob > NO_SPEECH_THRESHOLD or avg_logprob < LOGPROB_THRESHOLD or temperature > TEMPERATURE_THRESHOLD:
+            print(f"Dropping: '{text}' (filler={is_filler}, no_speech_prob={no_speech_prob:.3f}, avg_logprob={avg_logprob:.2f})")
+            continue
 
-        if (no_speech_prob > NO_SPEECH_THRESHOLD
-                or avg_logprob < LOGPROB_THRESHOLD
-                or temperature > TEMPERATURE_THRESHOLD):
-            print(f"Dropping likely hallucinated segment: '{seg.get('text','').strip()}' "
-                  f"(no_speech_prob={no_speech_prob:.2f}, avg_logprob={avg_logprob:.2f}, temperature={temperature})")
-            continue            
-
-        kept_text.append(seg.get("text", "").strip())
-
+        kept_text.append(text)
     return " ".join(kept_text).strip()
-
-
-
 
 
 def call_groq_transcribe_old(file_bytes: bytes, file_name: str = "recording.webm", model: str = "whisper-large-v3") -> str:
