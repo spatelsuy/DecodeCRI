@@ -238,7 +238,7 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
         return result.get("text", "").strip()
 
     # Filter out likely-hallucinated / silence segments
-    NO_SPEECH_THRESHOLD = 0.6
+    NO_SPEECH_THRESHOLD = 0.08
     LOGPROB_THRESHOLD = -1.0
     TEMPERATURE_THRESHOLD = 0.0  # if Whisper needed to raise temperature at all, treat with suspicion
     
