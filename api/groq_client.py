@@ -239,7 +239,8 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
     # Filter out likely-hallucinated / silence segments
     NO_SPEECH_THRESHOLD = 0.6
     LOGPROB_THRESHOLD = -1.0
-
+    TEMPERATURE_THRESHOLD = 0.0  # if Whisper needed to raise temperature at all, treat with suspicion
+    
     kept_text = []
     for seg in segments:
         print("THE SEGMENT=")
@@ -247,10 +248,12 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
         no_speech_prob = seg.get("no_speech_prob", 0.0)
         avg_logprob = seg.get("avg_logprob", 0.0)
 
-        if no_speech_prob > NO_SPEECH_THRESHOLD or avg_logprob < LOGPROB_THRESHOLD:
+        if (no_speech_prob > NO_SPEECH_THRESHOLD
+                or avg_logprob < LOGPROB_THRESHOLD
+                or temperature > TEMPERATURE_THRESHOLD):
             print(f"Dropping likely hallucinated segment: '{seg.get('text','').strip()}' "
-                  f"(no_speech_prob={no_speech_prob:.2f}, avg_logprob={avg_logprob:.2f})")
-            continue
+                  f"(no_speech_prob={no_speech_prob:.2f}, avg_logprob={avg_logprob:.2f}, temperature={temperature})")
+            continue            
 
         kept_text.append(seg.get("text", "").strip())
 
