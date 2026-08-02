@@ -56,7 +56,8 @@ async def transcribe_text(
     text: str = Form(...)        # Plain text instead of file
 ):
     # Your transcription code here
-    print("CLIENT =", user_name)
+    #print("CLIENT =", user_name)
+    print("######TEXT ANALYSIS######")
     
     try:
         initial_state: AudioProcessingState = {
@@ -93,7 +94,7 @@ async def transcribe_audio(
     file: UploadFile = File(...)     # Reads the raw webm file binary
 ):
     # Your transcription code here
-    print("TRANSCRIBE ONLY")
+    print("########TRANSCRIBE ONLY##########")
     
     try:
         audio_content = await file.read()
@@ -131,6 +132,7 @@ async def transcribe_audio(
 ):
     # Your transcription code here
     #print("CLIENT =", user_name)
+    print("********TRANSCRIBE*********")
     
     try:
         audio_content = await file.read()
