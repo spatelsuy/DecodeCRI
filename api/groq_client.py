@@ -303,7 +303,113 @@ def call_groq_transcribe_old(file_bytes: bytes, file_name: str = "recording.webm
     return result.get("text", "").strip()
 
 
-def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="llama-3.1-8b-instant"):
+def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="openai/gpt-oss-120b", reasoning_effort: str = "medium"):
+    GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY_PAID")
+    if not GROQ_API_KEY:
+        raise RuntimeError("PROMPT_GROQ_KEY_PAID not found in environment variables")
+
+    user_prompt = json.dumps(user_payload, indent=2)
+    print("\nMODEL === ", model, " | reasoning_effort =", reasoning_effort)
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0,
+        "max_tokens": 8192,
+        "include_reasoning": False,
+        "reasoning_effort": reasoning_effort,  # left at Groq's default — nothing changes unless you opt to test "low"
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "schedule_extraction_registry",
+                "strict": True,
+                "schema": my_strict_schema
+            }
+        }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=60)
+
+    # Log usage on every call — tells us how much of max_tokens reasoning is actually consuming,
+    # so we have real data instead of guessing next time something goes wrong.
+    try:
+        usage = response.json().get("usage")
+        if usage:
+            print("USAGE:", json.dumps(usage))
+    except Exception:
+        pass
+
+    def _repair(parsed: dict) -> dict:
+        # Guarantee the shape client-side — don't rely on the model always
+        # remembering to include empty categories.
+        parsed.setdefault("tasks", [])
+        parsed.setdefault("events", [])
+        parsed.setdefault("reminders", [])
+        parsed.setdefault("notes", [])
+        return parsed
+
+    if response.status_code != 200:
+        # Salvage attempt: Groq's schema-validation failure still returns the model's
+        # actual generated content in `failed_generation` — don't discard a good
+        # extraction just because required-but-empty keys were omitted.
+        try:
+			print("Status code=", response.status_code)
+            err_obj = response.json()
+            failed_gen = err_obj.get("error", {}).get("failed_generation")
+            if failed_gen:
+                salvaged = json.loads(failed_gen)
+                print("⚠️ Schema validation failed — salvaged from failed_generation instead of discarding.")
+                return _repair(salvaged)
+        except Exception as salvage_err:
+            print("Salvage attempt also failed:", salvage_err)
+
+        raise Exception(f"Groq API error: {response.text}")
+
+    message_obj = response.json()["choices"][0]["message"]
+    raw_output = message_obj.get("content", "")
+    if not raw_output or raw_output.strip() == "":
+        print("\n--- DEBUG ERROR ---")
+        print("Groq Response JSON structure:", response.json())
+        raise Exception("LLM content field came back completely empty. Check reasoning fields.")
+    raw_output = raw_output.strip()
+
+    cleaned = raw_output.replace("```json", "").replace("```", "").strip()
+    if not cleaned.startswith("{"):
+        start_idx = cleaned.find("{")
+        end_idx = cleaned.rfind("}") + 1
+        if start_idx != -1 and end_idx != 0:
+            cleaned = cleaned[start_idx:end_idx]
+
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        print("\n" + "="*50)
+        print("CRITICAL: JSON DECODE ERROR ENCOUNTERED!")
+        print(f"Error Message: {e}")
+        print("EXACT RAW OUTPUT RECEIVED FROM MODEL:")
+        print(raw_output)
+        print("="*50 + "\n")
+        raise Exception(f"LLM did not return valid JSON syntax. Decode Error: {e}")
+
+    if not isinstance(parsed, dict):
+        raise Exception("LLM did not return a valid JSON object map")
+
+    return _repair(parsed)
+
+
+
+
+
+
+def call_groqJSON_OLD(system_prompt: str, user_payload: Dict[str, Any], model="llama-3.1-8b-instant"):
     GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY_PAID")
     #GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
     if not GROQ_API_KEY:
