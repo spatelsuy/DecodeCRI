@@ -361,7 +361,7 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="opena
         # actual generated content in `failed_generation` — don't discard a good
         # extraction just because required-but-empty keys were omitted.
         try:
-			print("Status code=", response.status_code)
+            print("Status code=", response.status_code)
             err_obj = response.json()
             failed_gen = err_obj.get("error", {}).get("failed_generation")
             if failed_gen:
