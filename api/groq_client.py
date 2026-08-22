@@ -41,6 +41,11 @@ my_strict_schema = {
                                 "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
                                 "description": "Specific day if mentioned, otherwise null."
                             },
+                            "week_of_month": {
+                                "type": ["number", "null"],
+                                "enum": [1, 2, 3, 4, 5, -1, null],
+                                "description": "Only set when frequency is 'monthly' and the recurrence is based on a weekday (e.g. 'last Thursday', '2nd Monday', '5th Friday'). Leave as null in every other case."
+                            },
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
@@ -78,6 +83,11 @@ my_strict_schema = {
                                 "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
                                 "description": "Specific day if mentioned, otherwise null."
                             },
+                            "week_of_month": {
+                                "type": ["number", "null"],
+                                "enum": [1, 2, 3, 4, 5, -1, null],
+                                "description": "Only set when frequency is 'monthly' and the recurrence is based on a weekday (e.g. 'last Thursday', '2nd Monday', '5th Friday'). Leave as null in every other case."
+                            },                         
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
@@ -115,6 +125,11 @@ my_strict_schema = {
                                 "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
                                 "description": "Specific day if mentioned, otherwise null."
                             },
+                            "week_of_month": {
+                                "type": ["number", "null"],
+                                "enum": [1, 2, 3, 4, 5, -1, null],
+                                "description": "Only set when frequency is 'monthly' and the recurrence is based on a weekday (e.g. 'last Thursday', '2nd Monday', '5th Friday'). Leave as null in every other case."
+                            },                            
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
