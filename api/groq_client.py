@@ -49,7 +49,7 @@ my_strict_schema = {
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
-                        "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
+                        "required": ["is_recurring", "frequency", "day_of_week", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
                     }
                 },
@@ -91,7 +91,7 @@ my_strict_schema = {
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
-                        "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
+                        "required": ["is_recurring", "frequency", "day_of_week", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
                     }
                 },
@@ -133,7 +133,7 @@ my_strict_schema = {
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
-                        "required": ["is_recurring", "frequency", "day_of_week", "start_date", "end_date"],
+                        "required": ["is_recurring", "frequency", "day_of_week", "day_of_week", "start_date", "end_date"],
                         "additionalProperties": False
                     }
                 },
