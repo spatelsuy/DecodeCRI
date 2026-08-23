@@ -41,6 +41,10 @@ my_strict_schema = {
                                 "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
                                 "description": "Specific day if mentioned, otherwise null."
                             },
+                            "day_of_month": {
+                              "type": ["number", "null"],
+                              "description": "Only set when frequency is 'monthly' and the recurrence is based on a fixed day-of-month number (e.g. '25th of every month'). Leave null for weekday-based monthly patterns (use week_of_month/day_of_week instead) or non-monthly frequencies."
+                            },                            
                             "week_of_month": {
                                 "type": ["number", "null"],
                                 "enum": [1, 2, 3, 4, 5, -1, None],
@@ -49,7 +53,7 @@ my_strict_schema = {
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
-                        "required": ["is_recurring", "frequency", "day_of_week", "week_of_month", "start_date", "end_date"],
+                        "required": ["is_recurring", "frequency", "day_of_week", "day_of_month", "week_of_month", "start_date", "end_date"],
                         "additionalProperties": False
                     }
                 },
@@ -83,6 +87,10 @@ my_strict_schema = {
                                 "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
                                 "description": "Specific day if mentioned, otherwise null."
                             },
+                            "day_of_month": {
+                              "type": ["number", "null"],
+                              "description": "Only set when frequency is 'monthly' and the recurrence is based on a fixed day-of-month number (e.g. '25th of every month'). Leave null for weekday-based monthly patterns (use week_of_month/day_of_week instead) or non-monthly frequencies."
+                            },                              
                             "week_of_month": {
                                 "type": ["number", "null"],
                                 "enum": [1, 2, 3, 4, 5, -1, None],
@@ -91,7 +99,7 @@ my_strict_schema = {
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
-                        "required": ["is_recurring", "frequency", "day_of_week", "week_of_month", "start_date", "end_date"],
+                        "required": ["is_recurring", "frequency", "day_of_week", "day_of_month", "week_of_month", "start_date", "end_date"],
                         "additionalProperties": False
                     }
                 },
@@ -125,6 +133,10 @@ my_strict_schema = {
                                 "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", None],
                                 "description": "Specific day if mentioned, otherwise null."
                             },
+                            "day_of_month": {
+                              "type": ["number", "null"],
+                              "description": "Only set when frequency is 'monthly' and the recurrence is based on a fixed day-of-month number (e.g. '25th of every month'). Leave null for weekday-based monthly patterns (use week_of_month/day_of_week instead) or non-monthly frequencies."
+                            },                              
                             "week_of_month": {
                                 "type": ["number", "null"],
                                 "enum": [1, 2, 3, 4, 5, -1, None],
@@ -133,7 +145,7 @@ my_strict_schema = {
                             "start_date": {"type": ["string", "null"]},
                             "end_date": {"type": ["string", "null"]}
                         },
-                        "required": ["is_recurring", "frequency", "day_of_week", "week_of_month", "start_date", "end_date"],
+                        "required": ["is_recurring", "frequency", "day_of_week", "day_of_month", "week_of_month", "start_date", "end_date"],
                         "additionalProperties": False
                     }
                 },
