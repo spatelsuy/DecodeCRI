@@ -66,8 +66,12 @@ For vague time expressions:
 6a. CATEGORY RESOLUTION TIE-BREAKER PROTOCOL
 If an item overlaps multiple categories, you MUST resolve it using this strict linguistic syntax hierarchy:
 
-6a.1. FORCE TO 'REMINDERS' if the text contains explicit self-alert phrasing: "remind me to", "don't let me forget", "remember to", or "wake me up". 
+6a.1. FORCE TO 'REMINDERS' if the user explicitly asks to be alerted or prompted about this item -- phrasing like "remind me", "remind me to", "don't let me forget", "remember to", "wake me up", "please remind me",
+or similar self-alert requests, regardless of exact wording or position in the sentence.
    - Example: "Remind me to attend the 9am scrum" → REMINDER (Overrides Event).
+
+6a.1b. MERGE, DON'T DUPLICATE: A "remind me" / self-alert verb that refers to the SAME underlying commitment as another action in the same sentence (e.g. "pay the bill... please remind me") is NOT a separate atomic intent. It is a classification signal for that one commitment --
+merge both actions into a single item, classified per rule 6a.1, not two items.
 
 6a.2. FORCE TO 'EVENTS' if the text describes a meeting, appointment, interactive session, social plan, or presence-based commitment involving a specific time or location anchor.
    - Example: "I need to go to office at 8am" or "I have a call with Bob" → EVENT (Overrides Task).
@@ -152,7 +156,13 @@ You will receive a JSON payload with two keys. Treat them as follows:
 
 AUDIT CHECKLIST:
 1. MISSING DATA: Compare "user_speech_transcript" to "extracted_json". Are there any tasks, events, or reminders present in the transcript that were left out of the JSON? If so, add them.
-2. INVALID COPIES: Look inside "extracted_json". Did the first pass create redundant duplicates (e.g., creating an entry under 'notes' for details already explained inside a task)? If so, clean them up.
+2. INVALID COPIES: Look inside "extracted_json". Did the first pass create redundant duplicates? Two patterns to check:
+   a) A note entry that only repeats details already explained inside a task, event, or reminder -- remove the redundant note.
+   b) The SAME underlying commitment appearing as both a task/event AND a reminder. This is one stated intent, not two. Keep exactly ONE copy:
+      - If "user_speech_transcript" contains explicit self-alert phrasing ("remind me", "remind me to", "don't let me forget", "remember to", "please remind me", "wake me up", or similar -- regardless of exact wording or position), keep the REMINDER copy. Merge any recurrence, context, or priority detail from the discarded copy into the one you keep.
+      - Otherwise, keep whichever category matches the action itself and discard the reminder copy.
+   Never output both copies.
+
 3. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}" and "{{CURRENT_DAY_OF_WEEK}}". Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
 4. SOURCE VERIFICATION: Check the "source_segment" field. Ensure the text snippet inside it actually exists word-for-word in the "user_speech_transcript". If you modify an item's date or time during this audit, ensure the "source_segment" still reflects the text that provided that context.
 
