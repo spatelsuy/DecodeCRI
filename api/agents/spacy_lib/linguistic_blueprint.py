@@ -215,8 +215,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     )
  
     _DATE_WORD_RE = re.compile(
-        r"\b(today|tomorrow|tonight|yesterday|monday|tuesday|wednesday|thursday|"
-        r"friday|saturday|sunday)\b", re.IGNORECASE
+        r"\b(today|tomorrow|tonight|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", re.IGNORECASE
     )
  
     def __init__(self, base_date=None):
@@ -360,7 +359,7 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "text": raw,
                 "resolved_datetime": dt.isoformat()
             })
-        _apply_date_inheritance(temporal_entities, raw_text)
+        # temporal_entities = _apply_date_inheritance(temporal_entities, raw_text)
         return temporal_entities
  
  
