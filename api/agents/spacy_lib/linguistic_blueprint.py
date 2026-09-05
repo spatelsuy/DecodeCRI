@@ -99,6 +99,10 @@ _DATE_ANCHOR_PHRASES = [
 _DATE_SLASH_RE = re.compile(
     r"\b(1[0-2]|0?[1-9])/(3[01]|[12]\d|0?[1-9])(?:/\d{2,4})?\b"
 )
+
+_DATE_WORD_RE = re.compile(
+    r"\b(today|tomorrow|tonight|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", re.IGNORECASE
+)
  
  
 def _has_date_anchor_before(raw_text, match_start, window=20):
@@ -213,11 +217,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     _CLOCK_TIME_RE = re.compile(
         r"\b(1[0-2]|[1-9])(?::([0-5]\d))?\s?(a\.?m\.?|p\.?m\.?)\b", re.IGNORECASE
     )
- 
-    _DATE_WORD_RE = re.compile(
-        r"\b(today|tomorrow|tonight|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", re.IGNORECASE
-    )
- 
+  
     def __init__(self, base_date=None):
         # Resolved once per analyzer instance. generate_blueprint()
         # always passes the current call's timestamp explicitly, so
