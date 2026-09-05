@@ -318,7 +318,8 @@ class TemporalAnalyzer(BaseAnalyzer):
             seen.add(dedup_key)
             temporal_entities.append({
                 "text": raw,
-                "resolved_datetime": dt.isoformat()
+                "resolved_datetime": dt.isoformat(),
+                "_start_char": m.start()
             })
  
         # Regex fallback: recover clock-time expressions NER missed
@@ -340,7 +341,8 @@ class TemporalAnalyzer(BaseAnalyzer):
             seen.add(dedup_key)
             temporal_entities.append({
                 "text": raw,
-                "resolved_datetime": dt.isoformat()
+                "resolved_datetime": dt.isoformat(),
+                "_start_char": m.start()
             })
  
         # Regex fallback #2: recover slash-format dates (e.g. "7/20",
