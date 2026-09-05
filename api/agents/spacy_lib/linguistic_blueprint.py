@@ -367,7 +367,8 @@ class TemporalAnalyzer(BaseAnalyzer):
             seen.add(dedup_key)
             temporal_entities.append({
                 "text": raw,
-                "resolved_datetime": dt.isoformat()
+                "resolved_datetime": dt.isoformat(),
+                "_start_char": m.start()
             })
         temporal_entities = self._apply_date_inheritance(temporal_entities, raw_text)
         return temporal_entities
