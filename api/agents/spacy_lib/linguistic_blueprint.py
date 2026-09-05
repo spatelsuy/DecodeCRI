@@ -319,7 +319,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             temporal_entities.append({
                 "text": raw,
                 "resolved_datetime": dt.isoformat(),
-                "_start_char": m.start()
+                "_start_char": ent.start_char
             })
  
         # Regex fallback: recover clock-time expressions NER missed
