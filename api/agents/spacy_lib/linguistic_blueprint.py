@@ -248,7 +248,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             print("2")    
             for ent in entities_sorted:
                 window = raw_text[max(0, ent["_start_char"]-25):ent["_start_char"]+len(ent["text"])+10]
-                is_explicit = _is_explicit_date_entity(window)
+                is_explicit = self._is_explicit_date_entity(window)
                 dt = datetime.fromisoformat(ent["resolved_datetime"])
         
                 if is_explicit:
