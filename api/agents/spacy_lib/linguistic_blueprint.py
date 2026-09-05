@@ -224,7 +224,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         # this fallback only matters if the analyzer is used standalone.
         self.base_date = base_date or datetime.now()
      
-    def _is_explicit_date_entity(raw_text_around_span):
+    def _is_explicit_date_entity(self, raw_text_around_span):
         return bool(_DATE_WORD_RE.search(raw_text_around_span)) or bool(_DATE_SLASH_RE.search(raw_text_around_span))
 
  
@@ -238,7 +238,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             }
         )
 
-    def _apply_date_inheritance(temporal_entities, raw_text):
+    def _apply_date_inheritance(self, temporal_entities, raw_text):
         print("1")
         # Requires each entry to already carry "_start_char" internally (add this
         # alongside the existing fields in all three append blocks, strip before return)
