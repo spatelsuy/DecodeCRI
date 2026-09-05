@@ -242,32 +242,42 @@ class TemporalAnalyzer(BaseAnalyzer):
         print("1")
         # Requires each entry to already carry "_start_char" internally (add this
         # alongside the existing fields in all three append blocks, strip before return)
-        entities_sorted = sorted(temporal_entities, key=lambda e: e["_start_char"])
-        current_anchor_date = None  # a date(), not datetime
-        print("2")    
-        for ent in entities_sorted:
-            window = raw_text[max(0, ent["_start_char"]-25):ent["_start_char"]+len(ent["text"])+10]
-            is_explicit = _is_explicit_date_entity(window)
-            dt = datetime.fromisoformat(ent["resolved_datetime"])
-    
-            if is_explicit:
-                current_anchor_date = dt.date()
-                ent["date_source"] = "explicit"
-            elif current_anchor_date is not None:
-                # Bare time expression -- keep its time-of-day, but replace the
-                # date with whatever anchor was most recently established,
-                # instead of trusting dateparser's "next occurrence from now" guess.
-                corrected = datetime.combine(current_anchor_date, dt.time())
-                ent["resolved_datetime"] = corrected.isoformat()
-                ent["date_source"] = "inherited"
-            else:
-                ent["date_source"] = "default"  # no anchor seen yet -- today's date may be a real guess, flag it as such
-    
-        for ent in temporal_entities:
-            ent.pop("_start_char", None)
-        return temporal_entities
+        try:
+            entities_sorted = sorted(temporal_entities, key=lambda e: e["_start_char"])
+            current_anchor_date = None  # a date(), not datetime
+            print("2")    
+            for ent in entities_sorted:
+                window = raw_text[max(0, ent["_start_char"]-25):ent["_start_char"]+len(ent["text"])+10]
+                is_explicit = _is_explicit_date_entity(window)
+                dt = datetime.fromisoformat(ent["resolved_datetime"])
+        
+                if is_explicit:
+                    current_anchor_date = dt.date()
+                    ent["date_source"] = "explicit"
+                elif current_anchor_date is not None:
+                    # Bare time expression -- keep its time-of-day, but replace the
+                    # date with whatever anchor was most recently established,
+                    # instead of trusting dateparser's "next occurrence from now" guess.
+                    corrected = datetime.combine(current_anchor_date, dt.time())
+                    ent["resolved_datetime"] = corrected.isoformat()
+                    ent["date_source"] = "inherited"
+                else:
+                    ent["date_source"] = "default"  # no anchor seen yet -- today's date may be a real guess, flag it as such
+        
+            for ent in temporal_entities:
+                ent.pop("_start_char", None)
 
- 
+            print("3")
+            return temporal_entities
+        except Exception as e:
+            print("ERROR in _apply_date_inheritance:", repr(e))
+            # Clean up internal field even if an error occurs
+            for ent in temporal_entities:
+                ent.pop("_start_char", None)
+
+            # Return original temporal entities instead of crashing
+            return temporal_entities
+
     def analyze(self, doc, raw_text):
         temporal_entities = []
         seen = set()
