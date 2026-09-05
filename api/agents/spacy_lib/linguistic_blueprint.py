@@ -359,7 +359,7 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "text": raw,
                 "resolved_datetime": dt.isoformat()
             })
-        temporal_entities = _apply_date_inheritance(temporal_entities, raw_text)
+        temporal_entities = self._apply_date_inheritance(temporal_entities, raw_text)
         return temporal_entities
  
  
