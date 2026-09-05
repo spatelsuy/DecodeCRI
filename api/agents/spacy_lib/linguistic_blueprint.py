@@ -214,11 +214,20 @@ class TemporalAnalyzer(BaseAnalyzer):
         r"\b(1[0-2]|[1-9])(?::([0-5]\d))?\s?(a\.?m\.?|p\.?m\.?)\b", re.IGNORECASE
     )
  
+    _DATE_WORD_RE = re.compile(
+        r"\b(today|tomorrow|tonight|yesterday|monday|tuesday|wednesday|thursday|"
+        r"friday|saturday|sunday)\b", re.IGNORECASE
+    )
+ 
     def __init__(self, base_date=None):
         # Resolved once per analyzer instance. generate_blueprint()
         # always passes the current call's timestamp explicitly, so
         # this fallback only matters if the analyzer is used standalone.
         self.base_date = base_date or datetime.now()
+     
+    def _is_explicit_date_entity(raw_text_around_span):
+        return bool(_DATE_WORD_RE.search(raw_text_around_span)) or bool(_DATE_SLASH_RE.search(raw_text_around_span))
+
  
     def _resolve(self, raw):
         return dateparser.parse(
@@ -229,6 +238,36 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "RETURN_AS_TIMEZONE_AWARE": False,
             }
         )
+
+    def _apply_date_inheritance(temporal_entities, raw_text):
+        # Requires each entry to already carry "_start_char" internally (add this
+        # alongside the existing fields in all three append blocks, strip before return)
+        entities_sorted = sorted(temporal_entities, key=lambda e: e["_start_char"])
+        current_anchor_date = None  # a date(), not datetime
+    
+        for ent in entities_sorted:
+            window = raw_text[max(0, ent["_start_char"]-25):ent["_start_char"]+len(ent["text"])+10]
+            is_explicit = _is_explicit_date_entity(window)
+            dt = datetime.fromisoformat(ent["resolved_datetime"])
+    
+            if is_explicit:
+                current_anchor_date = dt.date()
+                ent["date_source"] = "explicit"
+            elif current_anchor_date is not None:
+                # Bare time expression -- keep its time-of-day, but replace the
+                # date with whatever anchor was most recently established,
+                # instead of trusting dateparser's "next occurrence from now" guess.
+                corrected = datetime.combine(current_anchor_date, dt.time())
+                ent["resolved_datetime"] = corrected.isoformat()
+                ent["date_source"] = "inherited"
+            else:
+                ent["date_source"] = "default"  # no anchor seen yet -- today's date may be a real guess, flag it as such
+    
+        for ent in temporal_entities:
+            ent.pop("_start_char", None)
+        return temporal_entities
+
+
  
     def analyze(self, doc, raw_text):
         temporal_entities = []
@@ -321,6 +360,7 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "text": raw,
                 "resolved_datetime": dt.isoformat()
             })
+        _apply_date_inheritance(temporal_entities, raw_text)
         return temporal_entities
  
  
