@@ -239,11 +239,12 @@ class TemporalAnalyzer(BaseAnalyzer):
         )
 
     def _apply_date_inheritance(temporal_entities, raw_text):
+        print("1")
         # Requires each entry to already carry "_start_char" internally (add this
         # alongside the existing fields in all three append blocks, strip before return)
         entities_sorted = sorted(temporal_entities, key=lambda e: e["_start_char"])
         current_anchor_date = None  # a date(), not datetime
-    
+        print("2")    
         for ent in entities_sorted:
             window = raw_text[max(0, ent["_start_char"]-25):ent["_start_char"]+len(ent["text"])+10]
             is_explicit = _is_explicit_date_entity(window)
@@ -265,7 +266,6 @@ class TemporalAnalyzer(BaseAnalyzer):
         for ent in temporal_entities:
             ent.pop("_start_char", None)
         return temporal_entities
-
 
  
     def analyze(self, doc, raw_text):
@@ -359,7 +359,7 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "text": raw,
                 "resolved_datetime": dt.isoformat()
             })
-        # temporal_entities = _apply_date_inheritance(temporal_entities, raw_text)
+        temporal_entities = _apply_date_inheritance(temporal_entities, raw_text)
         return temporal_entities
  
  
