@@ -24,6 +24,7 @@ The spoken text may be unpunctuated, conversational, fragmented, repetitive, par
 
 Today's date is: "{{CURRENT_DATE}}"
 Date format: YYYY-MM-DD
+User Timezone: America/New_York
 
 Extract and categorize the user's intent into:
 1. tasks      – things the user needs to do
@@ -148,6 +149,7 @@ You are a data validation utility. Your job is to audit a structured JSON object
 
 Today's date is: "{{CURRENT_DATE}}"
 Day of the week: "{{CURRENT_DAY_OF_WEEK}}"
+User Timezone: America/New_York
 
 INSTRUCTIONS FOR READING THE INPUT PAYLOAD:
 You will receive a JSON payload with two keys. Treat them as follows:
