@@ -24,7 +24,7 @@ The spoken text may be unpunctuated, conversational, fragmented, repetitive, par
 
 Today's date is: "{{CURRENT_DATE}}"
 Date format: YYYY-MM-DD
-User Timezone: America/New_York
+User Timezone: "{{USER_TIMEZONE}}"
 
 Extract and categorize the user's intent into:
 1. tasks      – things the user needs to do
@@ -149,7 +149,7 @@ You are a data validation utility. Your job is to audit a structured JSON object
 
 Today's date is: "{{CURRENT_DATE}}"
 Day of the week: "{{CURRENT_DAY_OF_WEEK}}"
-User Timezone: America/New_York
+User Timezone: "{{USER_TIMEZONE}}"
 
 INSTRUCTIONS FOR READING THE INPUT PAYLOAD:
 You will receive a JSON payload with two keys. Treat them as follows:
@@ -284,6 +284,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
       today_date = datetime.today().strftime('%Y-%m-%d')
       client_time = state["client_time"]
       final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', client_time)
+      final_prompt = final_prompt.replace('{{USER_TIMEZONE}}', user_tz)
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
         user_payload=user_payload,
@@ -378,6 +379,8 @@ def validate_and_ground_times(
 def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     """Node 2: Validate the extracted JSON."""
     print("--- Node 2: Validate extraction")
+    DEFAULT_TIMEZONE = "UTC"
+    user_tz = state.get("user_timezone") or DEFAULT_TIMEZONE
  
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
@@ -407,6 +410,7 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
       day_of_week = dt_obj.strftime('%A')
       final_prompt = VALIDATION_PROMPT.replace('{{CURRENT_DATE}}', client_time)
       final_prompt = final_prompt.replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
+      final_prompt = final_prompt.replace('{{USER_TIMEZONE}}', user_tz)
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
         user_payload=user_payload,
