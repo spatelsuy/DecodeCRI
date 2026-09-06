@@ -302,7 +302,58 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
       return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
 
 
+def validate_and_ground_times(categorized_data: dict, blueprint_temporal_entities: list) -> dict:
+    """
+    Ensures extracted event/task timestamps map accurately to Stage 1 temporal entities.
+    Allows time boundary offsets (e.g. 23:59:59) while enforcing ground date accuracy.
+    """
+    if not blueprint_temporal_entities:
+        return categorized_data
 
+    # Map blueprint entities sorted by longest text first to prevent short substring false-positives
+    sorted_entities = sorted(
+        [e for e in blueprint_temporal_entities if e.get("resolved_datetime")],
+        key=lambda x: len(x.get("text", "")),
+        reverse=True
+    )
+
+    valid_timestamps = {e["resolved_datetime"] for e in sorted_entities}
+    
+    # Extract set of valid YYYY-MM-DD dates to allow boundary flexibility (e.g., end-of-day deadlines)
+    valid_dates = {e["resolved_datetime"].split("T")[0] for e in sorted_entities if "T" in e["resolved_datetime"]}
+
+    for category in ["tasks", "events", "reminders"]:
+        for item in categorized_data.get(category, []):
+            item_time = item.get("time")
+            if not item_time:
+                continue
+
+            # Exact timestamp match - fully grounded
+            if item_time in valid_timestamps:
+                continue
+
+            item_date = item_time.split("T")[0] if "T" in item_time else None
+
+            # If the exact time isn't present, check if the DATE matches a blueprint entity
+            if item_date and item_date in valid_dates:
+                # Accept timestamp if the calendar date is grounded (e.g., EOD shift like 23:59:59)
+                continue
+
+            # Date/time is ungrounded or shifted — attempt to snap using blueprint text matching
+            matched_time = None
+            source_seg = item.get("source_segment", "").lower()
+
+            for entity in sorted_entities:
+                entity_text = entity.get("text", "").lower()
+                if entity_text and entity_text in source_seg:
+                    matched_time = entity.get("resolved_datetime")
+                    break
+
+            if matched_time:
+                item["time"] = matched_time
+
+    return categorized_data
+   
 
 def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     """Node 2: Validate the extracted JSON."""
@@ -349,9 +400,15 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
       date_warnings = check_item_dates(analysis_result, linguistic_blueprint)
       if date_warnings:
           print("DATE VALIDATION WARNINGS:", date_warnings)
+      
+      grounded_analysis_result = validate_and_ground_times(
+          extracted_json=analysis_result,
+          blueprint=linguistic_blueprint,
+          client_time=state["client_time"]
+      )   
  
       return {
-          "categorization_json": analysis_result,
+          "categorization_json": grounded_analysis_result,
           "date_warnings": date_warnings  # NEW: optional, for logging/UI/retry later
       }
  
