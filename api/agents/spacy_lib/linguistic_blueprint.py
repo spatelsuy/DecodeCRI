@@ -379,23 +379,30 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "_start_char": m.start()
             })
 
-
         # Regex fallback #3: recover weekday + daypart expressions (e.g. "Sunday night")
         for m in _WEEKDAY_DAYPART_RE.finditer(raw_text):
             span = (m.start(), m.end())
-            if any(span[0] < e and s < span[1] for s, e in ner_char_spans):
-                continue  # already covered by an earlier pass
-
             raw = m.group()
             lower = raw.lower()
+
+            # Remove partial NER entities (e.g., "Sunday") covered by this broader match ("Sunday night")
+            overlapping_spans = [s for s in ner_char_spans if span[0] < s[1] and s[0] < span[1]]
+            if overlapping_spans:
+                temporal_entities = [
+                    e for e in temporal_entities 
+                    if not any(s[0] <= e.get("_start_char", -1) < s[1] for s in overlapping_spans)
+                ]
+
             dt = self._resolve(raw)
 
             # Fallback to manual daypart time setting if _resolve returns a date at 00:00:00
             if dt is not None:
-                weekday, daypart = lower.split()
-                if daypart in _DAYPART_TIMES and dt.hour == 0 and dt.minute == 0:
-                    hour, minute = _DAYPART_TIMES[daypart]
-                    dt = dt.replace(hour=hour, minute=minute)
+                parts = lower.split()
+                if len(parts) == 2:
+                    weekday, daypart = parts
+                    if daypart in _DAYPART_TIMES and dt.hour == 0 and dt.minute == 0:
+                        hour, minute = _DAYPART_TIMES[daypart]
+                        dt = dt.replace(hour=hour, minute=minute)
 
             if dt is None:
                 continue
@@ -409,6 +416,9 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "resolved_datetime": dt.isoformat(),
                 "_start_char": m.start()
             })     
+
+
+     
         temporal_entities = self._apply_date_inheritance(temporal_entities, raw_text)
         return temporal_entities
  
