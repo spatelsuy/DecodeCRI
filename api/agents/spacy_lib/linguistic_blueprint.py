@@ -110,9 +110,30 @@ _DAYPART_TIMES = {
     "evening": (18, 0), "night": (21, 0), "noon": (12, 0), "midnight": (0, 0),
 }
 
+_WEEKDAY_RE = re.compile(
+    r"\b(?:(this|next|coming)\s+)?"
+    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+    re.IGNORECASE
+)
+
 _WEEKDAY_DAYPART_RE = re.compile(
-    r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
-    r"(morning|afternoon|evening|night|noon|midnight)\b", re.IGNORECASE
+    r"\b(?:(this|next|coming)\s+)?"
+    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
+    r"(morning|afternoon|evening|night|noon|midnight)\b",
+    re.IGNORECASE
+)
+
+_WEEKDAY_QUALIFIER_RE = re.compile(
+    r"\b(this|next|coming)\s+"
+    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+    re.IGNORECASE
+)
+
+_WEEKDAY_QUALIFIED_DAYPART_RE = re.compile(
+    r"\b(this|next|coming)\s+"
+    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
+    r"(morning|afternoon|evening|night)\b",
+    re.IGNORECASE
 )
 
  
@@ -228,35 +249,73 @@ class TemporalAnalyzer(BaseAnalyzer):
         # Resolved once per analyzer instance. generate_blueprint()
         # always passes the current call's timestamp explicitly, so
         # this fallback only matters if the analyzer is used standalone.
-        self.base_date = base_date or datetime.now()
+        local_tz = ZoneInfo("America/New_York")
+        self.base_date = base_date or datetime.now(local_tz)
      
     def _is_explicit_date_entity(self, raw_text_around_span):
         return bool(_DATE_WORD_RE.search(raw_text_around_span)) or bool(_DATE_SLASH_RE.search(raw_text_around_span))
 
-    def _resolve_weekday(self, weekday):
+    def _resolve_weekday(self, weekday, qualifier=None):
         """
-        Resolve a weekday relative to base_date. If the weekday is today, return today.
-        Otherwise return the next occurrence of that weekday.
+        Resolve a weekday relative to base_date.
+    
+        Rules:
+          - this Sunday  -> Sunday of the current week
+          - Sunday       -> today if today is Sunday, otherwise next occurrence
+          - coming Sunday -> next occurrence, unless today is Sunday
+          - next Sunday  -> next week's Sunday
         """
+    
         weekdays = {
-            "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6,
+            "monday": 0,
+            "tuesday": 1,
+            "wednesday": 2,
+            "thursday": 3,
+            "friday": 4,
+            "saturday": 5,
+            "sunday": 6,
         }
+    
         weekday = weekday.lower()
+        qualifier = qualifier.lower() if qualifier else None
+    
         if weekday not in weekdays:
             return None
     
         target = weekdays[weekday]
         current = self.base_date.weekday()
+    
         days_ahead = (target - current) % 7
+    
+        if qualifier == "next":
+            # "next Sunday" means the following occurrence,
+            # never today.
+            days_ahead = (target - current) % 7
+            if days_ahead == 0:
+                days_ahead = 7
+    
+        elif qualifier == "this":
+            # "this Sunday" means the Sunday in the current calendar week.
+            days_ahead = target - current
+    
+            # If the weekday has already passed this week, "this Sunday"
+            # should not jump backward into the previous week.
+            if days_ahead < 0:
+                return None
+    
+        elif qualifier == "coming":
+            # Treat "coming Sunday" as the next occurrence,
+            # but today itself is acceptable.
+            days_ahead = days_ahead
+    
         return self.base_date + timedelta(days=days_ahead)
-
     def _resolve(self, raw):
         return dateparser.parse(
             raw,
             settings={
                 "RELATIVE_BASE": self.base_date,
                 "PREFER_DATES_FROM": "future",
-                "RETURN_AS_TIMEZONE_AWARE": False,
+                "RETURN_AS_TIMEZONE_AWARE": True,
             }
         )
 
@@ -395,7 +454,30 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "_start_char": m.start()
             })
 
-        # Regex fallback #3: recover weekday + daypart expressions (e.g. "Sunday night")
+        # Regex fallback #3: qualified weekday + daypart
+        # Examples: "this Sunday night", "next Sunday night", "coming Sunday night"
+        for m in _WEEKDAY_QUALIFIED_DAYPART_RE.finditer(raw_text):
+            raw = m.group()
+            lower = raw.lower()
+        
+            qualifier, weekday, daypart = lower.split()
+        
+            base_dt = self._resolve_weekday(weekday, qualifier)
+        
+            if base_dt is None:
+                continue
+        
+            hour, minute = _DAYPART_TIMES[daypart]
+            dt = base_dt.replace(hour=hour, minute=minute)
+        
+            temporal_entities.append({
+                "text": raw,
+                "resolved_datetime": dt.isoformat(),
+                "_start_char": m.start()
+            })
+
+     
+        # Regex fallback #4: recover weekday + daypart expressions (e.g. "Sunday night")
         for m in _WEEKDAY_DAYPART_RE.finditer(raw_text):
             span = (m.start(), m.end())
             raw = m.group()
@@ -409,23 +491,26 @@ class TemporalAnalyzer(BaseAnalyzer):
                     if not any(s[0] <= e.get("_start_char", -1) < s[1] for s in overlapping_spans)
                 ]
 
-            dt = self._resolve(raw)
-
-            # Fallback 1: Manual time override if _resolve returned date at 00:00:00
             parts = lower.split()
-            if dt is not None and len(parts) == 2:
+            
+            if len(parts) == 2 and parts[0] in {
+                "monday", "tuesday", "wednesday",
+                "thursday", "friday", "saturday", "sunday"
+            } and parts[1] in _DAYPART_TIMES:
+            
                 weekday, daypart = parts
-                if daypart in _DAYPART_TIMES and dt.hour == 0 and dt.minute == 0:
-                    hour, minute = _DAYPART_TIMES[daypart]
-                    dt = dt.replace(hour=hour, minute=minute)
-
-            # Fallback 2: If _resolve("Sunday night") returned None, resolve weekday first
-            if dt is None and len(parts) == 2:
-                weekday, daypart = parts
-                base_dt = self._resolve_weekday(weekday)  # Resolves "Sunday" to 2026-09-06
-                if base_dt is not None and daypart in _DAYPART_TIMES:
+            
+                # Resolve weekday ourselves.
+                base_dt = self._resolve_weekday(weekday)
+            
+                if base_dt is not None:
                     hour, minute = _DAYPART_TIMES[daypart]
                     dt = base_dt.replace(hour=hour, minute=minute)
+                else:
+                    dt = None
+            
+            else:
+                dt = self._resolve(raw)
 
             if dt is None:
                 continue
@@ -438,7 +523,34 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "text": raw,
                 "resolved_datetime": dt.isoformat(),
                 "_start_char": m.start()
-            })     
+            })
+
+        # Regex fallback #5: qualified weekdays
+        # Examples: "this Sunday", "next Sunday", "coming Sunday"
+        for m in _WEEKDAY_QUALIFIER_RE.finditer(raw_text):
+            span = (m.start(), m.end())
+            raw = m.group()
+            lower = raw.lower()
+        
+            qualifier, weekday = lower.split()
+        
+            dt = self._resolve_weekday(weekday, qualifier)
+        
+            if dt is None:
+                continue
+        
+            dedup_key = (lower, dt.isoformat())
+            if dedup_key in seen:
+                continue
+        
+            seen.add(dedup_key)
+        
+            temporal_entities.append({
+                "text": raw,
+                "resolved_datetime": dt.isoformat(),
+                "_start_char": m.start()
+            })
+     
         temporal_entities = self._apply_date_inheritance(temporal_entities, raw_text)
         return temporal_entities
  
