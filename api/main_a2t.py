@@ -53,16 +53,18 @@ supabase: Client = create_client(url, key)
 async def transcribe_text(
     user_name: str = Form(...),
     client_time: str = Form(...),
-    text: str = Form(...)        # Plain text instead of file
+    text: str = Form(...),        # Plain text instead of file
+    user_timezone: str = Form(...)
 ):
     # Your transcription code here
-    #print("CLIENT =", user_name)
+    #print("CLIENT =", user_name + " " + user_timezone)
     print("######TEXT ANALYSIS######")
     
     try:
         initial_state: AudioProcessingState = {
             "user_name": user_name,
             "client_time": client_time,
+            "user_timezone" : user_timezone, 
             "file_bytes": "",
             "file_name": "dummy.webm",
             "transcription_text": text,
@@ -91,10 +93,11 @@ async def transcribe_text(
 async def transcribe_audio(
     user_name: str = Form(...),      # Reads form text
     client_time: str = Form(...),
-    file: UploadFile = File(...)     # Reads the raw webm file binary
+    file: UploadFile = File(...),     # Reads the raw webm file binary
+    user_timezone: str = Form(...)
 ):
     # Your transcription code here
-    print("########TRANSCRIBE ONLY##########")
+    print("########TRANSCRIBE ONLY##########" + user_timezone)
     
     try:
         audio_content = await file.read()
@@ -103,6 +106,7 @@ async def transcribe_audio(
     initial_state: AudioProcessingState = {
         "user_name": user_name,
         "client_time": client_time,
+        "user_timezone" : user_timezone, 
         "file_bytes": audio_content,
         "file_name": file.filename or "recording.webm",
         "transcription_text": None,
@@ -128,10 +132,11 @@ async def transcribe_audio(
 async def transcribe_audio(
     user_name: str = Form(...),      # Reads form text
     client_time: str = Form(...),
-    file: UploadFile = File(...)     # Reads the raw webm file binary
+    file: UploadFile = File(...),     # Reads the raw webm file binary
+    user_timezone: str = Form(...)
 ):
     # Your transcription code here
-    #print("CLIENT =", user_name)
+    #print("##CLIENT = ## ", user_name + " " + user_timezone)
     print("********TRANSCRIBE*********")
     
     try:
@@ -141,6 +146,7 @@ async def transcribe_audio(
     initial_state: AudioProcessingState = {
         "user_name": user_name,
         "client_time": client_time,
+        "user_timezone" : user_timezone, 
         "file_bytes": audio_content,
         "file_name": file.filename or "recording.webm",
         "transcription_text": None,
