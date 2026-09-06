@@ -103,7 +103,17 @@ _DATE_SLASH_RE = re.compile(
 _DATE_WORD_RE = re.compile(
     r"\b(today|tomorrow|tonight|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", re.IGNORECASE
 )
- 
+
+_DAYPART_TIMES = {
+    "morning": (9, 0), "afternoon": (15, 0), "after lunch": (14, 0),
+    "evening": (18, 0), "night": (21, 0), "noon": (12, 0), "midnight": (0, 0),
+}
+
+_WEEKDAY_DAYPART_RE = re.compile(
+    r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
+    r"(morning|afternoon|evening|night|noon|midnight)\b", re.IGNORECASE
+)
+
  
 def _has_date_anchor_before(raw_text, match_start, window=20):
     """
@@ -191,18 +201,13 @@ class BaseAnalyzer:
  
 class TemporalAnalyzer(BaseAnalyzer):
     """
-    Uses spaCy's DATE/TIME entity spans (reliable boundaries) as
-    candidates, then resolves each span individually with
-    dateparser.parse. This avoids the free-form phrase-boundary
-    bugs in dateparser.search_dates, which can slurp in unrelated
+    Uses spaCy's DATE/TIME entity spans (reliable boundaries) as candidates, then resolves each span individually with
+    dateparser.parse. This avoids the free-form phrase-boundary bugs in dateparser.search_dates, which can slurp in unrelated
     words (e.g. "at 11am after the") and misread them as dates.
  
-    spaCy's statistical NER occasionally mislabels clear clock-time
-    expressions as something other than DATE/TIME (observed: "10am"
-    tagged QUANTITY) which silently drops them from the DATE/TIME-only
-    scan above. A regex fallback recovers any clock-time pattern in
-    the raw text that NER missed. It also re-clips TIME spans that
-    NER over-extended into adjacent, unrelated words (observed:
+    spaCy's statistical NER occasionally mislabels clear clock-time expressions as something other than DATE/TIME (observed: "10am"
+    tagged QUANTITY) which silently drops them from the DATE/TIME-only scan above. A regex fallback recovers any clock-time pattern in
+    the raw text that NER missed. It also re-clips TIME spans that NER over-extended into adjacent, unrelated words (observed:
     "9am PST Hari" merged a person's name into the time span).
     """
     key = "temporal_entities"
@@ -372,6 +377,37 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "resolved_datetime": dt.isoformat(),
                 "_start_char": m.start()
             })
+
+
+        # Regex fallback #3: recover weekday + daypart expressions (e.g. "Sunday night")
+        for m in _WEEKDAY_DAYPART_RE.finditer(raw_text):
+            span = (m.start(), m.end())
+            if any(span[0] < e and s < span[1] for s, e in ner_char_spans):
+                continue  # already covered by an earlier pass
+
+            raw = m.group()
+            lower = raw.lower()
+            dt = self._resolve(raw)
+
+            # Fallback to manual daypart time setting if _resolve returns a date at 00:00:00
+            if dt is not None:
+                weekday, daypart = lower.split()
+                if daypart in _DAYPART_TIMES and dt.hour == 0 and dt.minute == 0:
+                    hour, minute = _DAYPART_TIMES[daypart]
+                    dt = dt.replace(hour=hour, minute=minute)
+
+            if dt is None:
+                continue
+
+            dedup_key = (lower, dt.isoformat())
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
+            temporal_entities.append({
+                "text": raw,
+                "resolved_datetime": dt.isoformat(),
+                "_start_char": m.start()
+            })     
         temporal_entities = self._apply_date_inheritance(temporal_entities, raw_text)
         return temporal_entities
  
