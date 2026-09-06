@@ -302,44 +302,63 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
       return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
 
 
-def validate_and_ground_times(categorized_data: dict, blueprint_temporal_entities: list) -> dict:
+def validate_and_ground_times(
+    extracted_json: dict = None, 
+    categorized_data: dict = None, 
+    blueprint_temporal_entities: list = None,
+    **kwargs
+) -> dict:
     """
-    Ensures extracted event/task timestamps map accurately to Stage 1 temporal entities.
-    Allows time boundary offsets (e.g. 23:59:59) while enforcing ground date accuracy.
+    Ensures extracted event/task timestamps strictly match valid timestamps 
+    generated in Stage 1, while tolerating end-of-day offsets and LLM timezone corrections.
     """
-    if not blueprint_temporal_entities:
-        return categorized_data
+    # Standardize input dictionary parameter
+    data = extracted_json or categorized_data or {}
+    if not data or not blueprint_temporal_entities:
+        return data
 
-    # Map blueprint entities sorted by longest text first to prevent short substring false-positives
+    # Extract valid dates and exact timestamps from blueprint
+    blueprint_timestamps = set()
+    blueprint_dates = set()
+
+    for entity in blueprint_temporal_entities:
+        dt_str = entity.get("resolved_datetime")
+        if dt_str:
+            blueprint_timestamps.add(dt_str)
+            base_date = dt_str.split("T")[0]
+            blueprint_dates.add(base_date)
+            
+            # Allow +/- 1 day tolerance for midnight boundaries (e.g. "before Monday" => Sunday 23:59:59)
+            try:
+                dt_obj = datetime.fromisoformat(dt_str)
+                blueprint_dates.add((dt_obj - timedelta(days=1)).strftime("%Y-%m-%d"))
+                blueprint_dates.add((dt_obj + timedelta(days=1)).strftime("%Y-%m-%d"))
+            except ValueError:
+                pass
+
+    # Sort entities by phrase length descending to prioritize longer phrases ("8:30 pm" over "8 pm")
     sorted_entities = sorted(
         [e for e in blueprint_temporal_entities if e.get("resolved_datetime")],
         key=lambda x: len(x.get("text", "")),
         reverse=True
     )
 
-    valid_timestamps = {e["resolved_datetime"] for e in sorted_entities}
-    
-    # Extract set of valid YYYY-MM-DD dates to allow boundary flexibility (e.g., end-of-day deadlines)
-    valid_dates = {e["resolved_datetime"].split("T")[0] for e in sorted_entities if "T" in e["resolved_datetime"]}
-
     for category in ["tasks", "events", "reminders"]:
-        for item in categorized_data.get(category, []):
+        for item in data.get(category, []):
             item_time = item.get("time")
             if not item_time:
                 continue
 
-            # Exact timestamp match - fully grounded
-            if item_time in valid_timestamps:
+            # Case 1: Exact timestamp match
+            if item_time in blueprint_timestamps:
                 continue
 
+            # Case 2: Calendar date matches within +/- 1 day boundary tolerance
             item_date = item_time.split("T")[0] if "T" in item_time else None
-
-            # If the exact time isn't present, check if the DATE matches a blueprint entity
-            if item_date and item_date in valid_dates:
-                # Accept timestamp if the calendar date is grounded (e.g., EOD shift like 23:59:59)
+            if item_date and item_date in blueprint_dates:
                 continue
 
-            # Date/time is ungrounded or shifted — attempt to snap using blueprint text matching
+            # Case 3: Timestamp shifted/ungrounded — attempt source segment text snapping
             matched_time = None
             source_seg = item.get("source_segment", "").lower()
 
@@ -352,8 +371,7 @@ def validate_and_ground_times(categorized_data: dict, blueprint_temporal_entitie
             if matched_time:
                 item["time"] = matched_time
 
-    return categorized_data
-   
+    return data   
 
 def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     """Node 2: Validate the extracted JSON."""
