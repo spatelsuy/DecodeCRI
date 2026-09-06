@@ -116,23 +116,22 @@ _WEEKDAY_RE = re.compile(
     re.IGNORECASE
 )
 
-_WEEKDAY_DAYPART_RE = re.compile(
-    r"\b(?:(this|next|coming)\s+)?"
-    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
-    r"(morning|afternoon|evening|night|noon|midnight)\b",
-    re.IGNORECASE
-)
-
-_WEEKDAY_QUALIFIER_RE = re.compile(
-    r"\b(this|next|coming)\s+"
-    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
-    re.IGNORECASE
-)
-
 _WEEKDAY_QUALIFIED_DAYPART_RE = re.compile(
     r"\b(this|next|coming)\s+"
     r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
     r"(morning|afternoon|evening|night)\b",
+    re.IGNORECASE
+)
+_WEEKDAY_DAYPART_RE = re.compile(
+    r"(?<!this )(?<!next )(?<!coming )\b"
+    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
+    r"(morning|afternoon|evening|night|noon|midnight)\b",
+    re.IGNORECASE
+)
+_WEEKDAY_QUALIFIER_RE = re.compile(
+    r"\b(this|next|coming)\s+"
+    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b"
+    r"(?!\s+(morning|afternoon|evening|night|noon|midnight))",
     re.IGNORECASE
 )
 
@@ -256,12 +255,9 @@ class TemporalAnalyzer(BaseAnalyzer):
     """
     key = "temporal_entities"
  
-    # Matches clock times like "9am", "10 pm", "11:30am", "9 a.m." —
-    # used both to recover entities spaCy's NER mislabels, and to
-    # re-clip NER spans that swallow adjacent non-time words. Hour is
-    # constrained to 1-12 (valid 12-hour clock range) and minutes to
-    # 00-59, so invalid strings like "13am" or "3:65am" (which the
-    # unconstrained \d{1,2} version used to match) are correctly
+    # Matches clock times like "9am", "10 pm", "11:30am", "9 a.m." — used both to recover entities spaCy's NER mislabels, and to
+    # re-clip NER spans that swallow adjacent non-time words. Hour is constrained to 1-12 (valid 12-hour clock range) and minutes to
+    # 00-59, so invalid strings like "13am" or "3:65am" (which the unconstrained \d{1,2} version used to match) are correctly
     # rejected rather than passed through to dateparser.
     _CLOCK_TIME_RE = re.compile(
         r"\b(1[0-2]|[1-9])(?::([0-5]\d))?\s?(a\.?m\.?|p\.?m\.?)\b", re.IGNORECASE
@@ -302,7 +298,6 @@ class TemporalAnalyzer(BaseAnalyzer):
     
         target = weekdays[weekday]
         current = self.base_date.weekday()
-    
         days_ahead = (target - current) % 7
     
         if qualifier == "next":
@@ -479,11 +474,8 @@ class TemporalAnalyzer(BaseAnalyzer):
         for m in _WEEKDAY_QUALIFIED_DAYPART_RE.finditer(raw_text):
             raw = m.group()
             lower = raw.lower()
-        
             qualifier, weekday, daypart = lower.split()
-        
             base_dt = self._resolve_weekday(weekday, qualifier)
-        
             if base_dt is None:
                 continue
         
@@ -496,7 +488,6 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "_start_char": m.start()
             })
 
-     
         # Regex fallback #4: recover weekday + daypart expressions (e.g. "Sunday night")
         for m in _WEEKDAY_DAYPART_RE.finditer(raw_text):
             span = (m.start(), m.end())
