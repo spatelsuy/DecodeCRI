@@ -233,7 +233,23 @@ class TemporalAnalyzer(BaseAnalyzer):
     def _is_explicit_date_entity(self, raw_text_around_span):
         return bool(_DATE_WORD_RE.search(raw_text_around_span)) or bool(_DATE_SLASH_RE.search(raw_text_around_span))
 
- 
+    def _resolve_weekday(self, weekday):
+        """
+        Resolve a weekday relative to base_date. If the weekday is today, return today.
+        Otherwise return the next occurrence of that weekday.
+        """
+        weekdays = {
+            "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6,
+        }
+        weekday = weekday.lower()
+        if weekday not in weekdays:
+            return None
+    
+        target = weekdays[weekday]
+        current = self.base_date.weekday()
+        days_ahead = (target - current) % 7
+        return self.base_date + timedelta(days=days_ahead)
+
     def _resolve(self, raw):
         return dateparser.parse(
             raw,
@@ -406,7 +422,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             # Fallback 2: If _resolve("Sunday night") returned None, resolve weekday first
             if dt is None and len(parts) == 2:
                 weekday, daypart = parts
-                base_dt = self._resolve(weekday)  # Resolves "Sunday" to 2026-09-06
+                base_dt = self._resolve_weekday(weekday)  # Resolves "Sunday" to 2026-09-06
                 if base_dt is not None and daypart in _DAYPART_TIMES:
                     hour, minute = _DAYPART_TIMES[daypart]
                     dt = base_dt.replace(hour=hour, minute=minute)
