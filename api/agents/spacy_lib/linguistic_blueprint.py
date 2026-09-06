@@ -763,7 +763,7 @@ def _default_analyzers(base_date, timezone_name=DEFAULT_TIMEZONE):
     ]
  
 def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None, timezone_name=DEFAULT_TIMEZONE):
-    print("GENERATING BLUEPRINT CALLED")
+    print("GENERATING BLUEPRINT CALLED " + timezone_name)
     local_tz = get_timezone(timezone_name)
     if base_date is None:
         base_date = datetime.now(local_tz).replace(microsecond=0)
