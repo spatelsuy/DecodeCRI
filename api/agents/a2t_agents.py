@@ -271,8 +271,10 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
- 
-    linguistic_blueprint = generate_blueprint(text_to_analyze)
+
+    DEFAULT_TIMEZONE = "UTC"
+    user_tz = state.get("user_timezone") or DEFAULT_TIMEZONE
+    linguistic_blueprint = generate_blueprint(text_to_analyze, timezone_name=user_tz)
     print("LINGUISTIC_BLUEPRINT", linguistic_blueprint)
     user_payload = {
         "linguistic_blueprint": linguistic_blueprint
