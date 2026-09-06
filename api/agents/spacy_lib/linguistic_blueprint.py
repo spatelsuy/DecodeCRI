@@ -395,14 +395,21 @@ class TemporalAnalyzer(BaseAnalyzer):
 
             dt = self._resolve(raw)
 
-            # Fallback to manual daypart time setting if _resolve returns a date at 00:00:00
-            if dt is not None:
-                parts = lower.split()
-                if len(parts) == 2:
-                    weekday, daypart = parts
-                    if daypart in _DAYPART_TIMES and dt.hour == 0 and dt.minute == 0:
-                        hour, minute = _DAYPART_TIMES[daypart]
-                        dt = dt.replace(hour=hour, minute=minute)
+            # Fallback 1: Manual time override if _resolve returned date at 00:00:00
+            parts = lower.split()
+            if dt is not None and len(parts) == 2:
+                weekday, daypart = parts
+                if daypart in _DAYPART_TIMES and dt.hour == 0 and dt.minute == 0:
+                    hour, minute = _DAYPART_TIMES[daypart]
+                    dt = dt.replace(hour=hour, minute=minute)
+
+            # Fallback 2: If _resolve("Sunday night") returned None, resolve weekday first
+            if dt is None and len(parts) == 2:
+                weekday, daypart = parts
+                base_dt = self._resolve(weekday)  # Resolves "Sunday" to 2026-09-06
+                if base_dt is not None and daypart in _DAYPART_TIMES:
+                    hour, minute = _DAYPART_TIMES[daypart]
+                    dt = base_dt.replace(hour=hour, minute=minute)
 
             if dt is None:
                 continue
