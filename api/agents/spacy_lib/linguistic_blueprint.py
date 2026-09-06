@@ -11,6 +11,7 @@
 import json
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import spacy
 import dateparser
  
@@ -600,18 +601,15 @@ def _default_analyzers(base_date):
 
 def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None):
     """
-    context: a LinguisticContext instance (created if not supplied).
-    analyzers: list of BaseAnalyzer instances (defaults to all six
-    built-in analyzers). Pass a custom list to run a subset, or a
-    longer list to add new analyzers without touching this function.
-    base_date: the "current date" used both as the relative-date
-    anchor for TemporalAnalyzer and as the "current_date" field in
-    the returned blueprint. Defaults to datetime.now(), resolved
-    fresh on every call rather than fixed at import time.
+    context: a LinguisticContext instance (created if not supplied). analyzers: list of BaseAnalyzer instances (defaults to all six
+    built-in analyzers). Pass a custom list to run a subset, or a longer list to add new analyzers without touching this function.
+    base_date: the "current date" used both as the relative-date anchor for TemporalAnalyzer and as the "current_date" field in
+    the returned blueprint. Defaults to datetime.now(), resolved fresh on every call rather than fixed at import time.
     """
     print("GENERTING BLUEPRINT CALLED")
     context = context or LinguisticContext(debug=False)
-    base_date = base_date or datetime.now()
+    local_tz = ZoneInfo("America/New_York")
+    base_date = base_date or datetime.now(local_tz)
     analyzers = analyzers if analyzers is not None else _default_analyzers(base_date)
 
     #get doc object from spaCy
