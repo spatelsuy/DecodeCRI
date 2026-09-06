@@ -488,7 +488,7 @@ class TemporalAnalyzer(BaseAnalyzer):
                 continue
         
             hour, minute = _DAYPART_TIMES[daypart]
-            dt = base_dt.replace(hour=hour, minute=minute)
+            dt = base_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
         
             temporal_entities.append({
                 "text": raw,
@@ -766,7 +766,7 @@ def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None, t
     print("GENERATING BLUEPRINT CALLED")
     local_tz = get_timezone(timezone_name)
     if base_date is None:
-        base_date = datetime.now(local_tz)
+        base_date = datetime.now(local_tz).replace(microsecond=0)
     else:
         base_date = ensure_timezone(base_date, timezone_name)
 
