@@ -136,6 +136,28 @@ _WEEKDAY_QUALIFIED_DAYPART_RE = re.compile(
     re.IGNORECASE
 )
 
+DEFAULT_TIMEZONE = "America/New_York"
+def get_timezone(timezone_name=None):
+    """
+    Return the configured ZoneInfo timezone.
+    All temporal processing in this module should use this timezone.
+    """
+    return ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
+
+def get_local_now(timezone_name=None):
+    """
+    Return the current timezone-aware datetime in the configured timezone.
+    """
+    return datetime.now(get_timezone(timezone_name))
+
+def ensure_timezone(dt, timezone_name=None):
+    """
+    Ensure a datetime is timezone-aware and expressed in the configured timezone.
+    """
+    tz = get_timezone(timezone_name)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=tz)
+    return dt.astimezone(tz)
  
 def _has_date_anchor_before(raw_text, match_start, window=20):
     """
@@ -245,12 +267,13 @@ class TemporalAnalyzer(BaseAnalyzer):
         r"\b(1[0-2]|[1-9])(?::([0-5]\d))?\s?(a\.?m\.?|p\.?m\.?)\b", re.IGNORECASE
     )
   
-    def __init__(self, base_date=None):
-        # Resolved once per analyzer instance. generate_blueprint()
-        # always passes the current call's timestamp explicitly, so
-        # this fallback only matters if the analyzer is used standalone.
-        local_tz = ZoneInfo("America/New_York")
-        self.base_date = base_date or datetime.now(local_tz)
+    def __init__(self, base_date=None, timezone_name=DEFAULT_TIMEZONE):
+       self.timezone_name = timezone_name
+       self.local_tz = get_timezone(timezone_name)   
+       if base_date is None:
+           self.base_date = datetime.now(self.local_tz)
+       else:
+           self.base_date = ensure_timezone(base_date, timezone_name)
      
     def _is_explicit_date_entity(self, raw_text_around_span):
         return bool(_DATE_WORD_RE.search(raw_text_around_span)) or bool(_DATE_SLASH_RE.search(raw_text_around_span))
@@ -267,13 +290,8 @@ class TemporalAnalyzer(BaseAnalyzer):
         """
     
         weekdays = {
-            "monday": 0,
-            "tuesday": 1,
-            "wednesday": 2,
-            "thursday": 3,
-            "friday": 4,
-            "saturday": 5,
-            "sunday": 6,
+            "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+            "friday": 4, "saturday": 5, "sunday": 6,
         }
     
         weekday = weekday.lower()
@@ -309,6 +327,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             days_ahead = days_ahead
     
         return self.base_date + timedelta(days=days_ahead)
+ 
     def _resolve(self, raw):
         return dateparser.parse(
             raw,
@@ -316,9 +335,10 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "RELATIVE_BASE": self.base_date,
                 "PREFER_DATES_FROM": "future",
                 "RETURN_AS_TIMEZONE_AWARE": True,
+                "TIMEZONE": self.timezone_name,
             }
         )
-
+ 
     def _apply_date_inheritance(self, temporal_entities, raw_text):
         print("1")
         # Requires each entry to already carry "_start_char" internally (add this
@@ -339,7 +359,7 @@ class TemporalAnalyzer(BaseAnalyzer):
                     # Bare time expression -- keep its time-of-day, but replace the
                     # date with whatever anchor was most recently established,
                     # instead of trusting dateparser's "next occurrence from now" guess.
-                    corrected = datetime.combine(current_anchor_date, dt.time())
+                    corrected = datetime(current_anchor_date.year, current_anchor_date.month, current_anchor_date.day, dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=self.local_tz)
                     ent["resolved_datetime"] = corrected.isoformat()
                     ent["date_source"] = "inherited"
                 else:
@@ -729,41 +749,37 @@ class EntityAnalyzer(BaseAnalyzer):
         return entities
 
 # MAIN BLUEPRINT GENERATOR
-def _default_analyzers(base_date):
+def _default_analyzers(base_date, timezone_name=DEFAULT_TIMEZONE):
     return [
-        TemporalAnalyzer(base_date),
+        TemporalAnalyzer(
+            base_date=base_date,
+            timezone_name=timezone_name
+        ),
         ActionAnalyzer(),
         RelationshipAnalyzer(),
         CorrectionAnalyzer(),
         TypoAnalyzer(),
         EntityAnalyzer(),
     ]
+ 
+def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None, timezone_name=DEFAULT_TIMEZONE):
+    print("GENERATING BLUEPRINT CALLED")
+    local_tz = get_timezone(timezone_name)
+    if base_date is None:
+        base_date = datetime.now(local_tz)
+    else:
+        base_date = ensure_timezone(base_date, timezone_name)
 
-
-
-def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None):
-    """
-    context: a LinguisticContext instance (created if not supplied). analyzers: list of BaseAnalyzer instances (defaults to all six
-    built-in analyzers). Pass a custom list to run a subset, or a longer list to add new analyzers without touching this function.
-    base_date: the "current date" used both as the relative-date anchor for TemporalAnalyzer and as the "current_date" field in
-    the returned blueprint. Defaults to datetime.now(), resolved fresh on every call rather than fixed at import time.
-    """
-    print("GENERTING BLUEPRINT CALLED")
     context = context or LinguisticContext(debug=False)
-    local_tz = ZoneInfo("America/New_York")
-    base_date = base_date or datetime.now(local_tz)
-    analyzers = analyzers if analyzers is not None else _default_analyzers(base_date)
-
-    #get doc object from spaCy
+    analyzers = (
+        analyzers
+        if analyzers is not None
+        else _default_analyzers(base_date, timezone_name)
+    )
     doc = context.parse(raw_text)
-
     evidence = {}
     for analyzer in analyzers:
         evidence[analyzer.key] = analyzer.analyze(doc, raw_text)
-
     return {
-        "user_speech_transcript": raw_text,
-        "language": "en",
-        "current_date": base_date.isoformat(),
-        "evidence": evidence
+        "user_speech_transcript": raw_text, "language": "en", "timezone": timezone_name, "current_date": base_date.isoformat(), "evidence": evidence
     }
