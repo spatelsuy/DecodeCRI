@@ -86,3 +86,70 @@ CMN_WEEKDAY_QUALIFIER_RE = re.compile(
 
 DEFAULT_TIMEZONE = "America/New_York"
 
+
+
+def cmn_is_number_token(tok):
+    return tok.like_num or bool(CMN_NUMBER_WORD_RE.match(tok.text))
+ 
+def cmn_find_correction_markers(raw_text):
+    """
+    Returns every correction-marker occurrence in raw_text with its character span, e.g. [{"text": "actually", "start_char": 19,
+    "end_char": 27}]. Single source of truth shared by CorrectionAnalyzer and EntityAnalyzer so both agree on where
+    corrections happen instead of each re-deriving it separately.
+    """
+    markers = []
+    lower = raw_text.lower()
+    for marker in CMN_CORRECTION_MARKERS:
+        start = 0
+        while True:
+            idx = lower.find(marker, start)
+            if idx == -1:
+                break
+            markers.append({
+                "text": marker,
+                "start_char": idx,
+                "end_char": idx + len(marker)
+            })
+            start = idx + len(marker)
+    return markers
+ 
+ 
+def cmn_earliest_marker(markers):
+    """
+    Given markers already filtered to one sentence, returns the earliest one. Only the first marker in a sentence acts as the
+    correction pivot -- a later marker (e.g. "instead" reinforcing an already-corrected value) must not re-flag the corrected value
+    itself as superseded.
+    """
+    return min(markers, key=lambda m: m["start_char"]) if markers else None
+
+def cmn_get_timezone(timezone_name=None):
+    """
+    Return the configured ZoneInfo timezone. All temporal processing in this module should use this timezone.
+    """
+    return ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
+
+def cmn_get_local_now(timezone_name=None):
+    """
+    Return the current timezone-aware datetime in the configured timezone.
+    """
+    return datetime.now(cmn_get_timezone(timezone_name))
+
+def cmn_ensure_timezone(dt, timezone_name=None):
+    """
+    Ensure a datetime is timezone-aware and expressed in the configured timezone.
+    """
+    tz = cmn_get_timezone(timezone_name)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=tz)
+    return dt.astimezone(tz)
+ 
+def cmn_has_date_anchor_before(raw_text, match_start, window=20):
+    """
+    True if one of CMN_DATE_ANCHOR_PHRASES appears immediately (allowing trailing whitespace) before match_start. Prevents an N/N pattern
+    from being treated as a date with no supporting context.
+    """
+    prefix = raw_text[max(0, match_start - window):match_start].lower().rstrip()
+    return any(prefix.endswith(phrase) for phrase in CMN_DATE_ANCHOR_PHRASES)
+ 
+
+
