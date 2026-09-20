@@ -225,7 +225,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             # If this is a TIME entity but NER over-extended the span
             # to include non-time words (e.g. "9am PST Hari"), re-clip
             # it down to just the clock-time pattern.
-            clock_match = self.CMN_CLOCK_TIME_RE.search(raw)
+            clock_match = CMN_CLOCK_TIME_RE.search(raw)
             if ent.label_ == "TIME" and clock_match and clock_match.group() != raw:
                 raw = clock_match.group()
                 lower = raw.lower()
@@ -248,7 +248,7 @@ class TemporalAnalyzer(BaseAnalyzer):
  
         # Regex fallback: recover clock-time expressions NER missed
         # entirely (mislabeled as something other than DATE/TIME).
-        for m in self.CMN_CLOCK_TIME_RE.finditer(raw_text):
+        for m in CMN_CLOCK_TIME_RE.finditer(raw_text):
             span = (m.start(), m.end())
             if any(span[0] < e and s < span[1] for s, e in ner_char_spans):
                 continue  # already covered by the NER pass above
