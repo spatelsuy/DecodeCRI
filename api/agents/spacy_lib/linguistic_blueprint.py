@@ -8,6 +8,8 @@
 # python -m spacy download en_core_web_sm
 #
 # ==========================================================
+import sys
+import os
 import json
 import re
 from datetime import datetime, timedelta
