@@ -22,6 +22,7 @@ from spacy_lib.BaseAnalyzer import BaseAnalyzer
 from spacy_lib.TypoAnalyzer import TypoAnalyzer
 from spacy_lib.EntityAnalyzer import EntityAnalyzer
 from spacy_lib.CorrectionAnalyzer import CorrectionAnalyzer
+from spacy_lib.RelationshipAnalyzer import RelationshipAnalyzer
  
 # ==========================================================
 # LINGUISTIC CONTEXT
