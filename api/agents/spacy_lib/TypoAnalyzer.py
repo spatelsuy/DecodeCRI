@@ -5,6 +5,8 @@ from zoneinfo import ZoneInfo
 import spacy
 import dateparser
 
+from BaseAnalyzer import BaseAnalyzer
+
 class TypoAnalyzer(BaseAnalyzer):
     key = "possible_typos"
     _TYPO_RULES = {
