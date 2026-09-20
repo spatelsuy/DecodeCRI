@@ -90,14 +90,6 @@ class TemporalAnalyzer(BaseAnalyzer):
     "9am PST Hari" merged a person's name into the time span).
     """
     key = "temporal_entities"
- 
-    # Matches clock times like "9am", "10 pm", "11:30am", "9 a.m." — used both to recover entities spaCy's NER mislabels, and to
-    # re-clip NER spans that swallow adjacent non-time words. Hour is constrained to 1-12 (valid 12-hour clock range) and minutes to
-    # 00-59, so invalid strings like "13am" or "3:65am" (which the unconstrained \d{1,2} version used to match) are correctly
-    # rejected rather than passed through to dateparser.
-    _CLOCK_TIME_RE = re.compile(
-        r"\b(1[0-2]|[1-9])(?::([0-5]\d))?\s?(a\.?m\.?|p\.?m\.?)\b", re.IGNORECASE
-    )
   
     def __init__(self, base_date=None, timezone_name=DEFAULT_TIMEZONE):
        self.timezone_name = timezone_name
@@ -233,7 +225,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             # If this is a TIME entity but NER over-extended the span
             # to include non-time words (e.g. "9am PST Hari"), re-clip
             # it down to just the clock-time pattern.
-            clock_match = self._CLOCK_TIME_RE.search(raw)
+            clock_match = self.CMN_CLOCK_TIME_RE.search(raw)
             if ent.label_ == "TIME" and clock_match and clock_match.group() != raw:
                 raw = clock_match.group()
                 lower = raw.lower()
@@ -256,7 +248,7 @@ class TemporalAnalyzer(BaseAnalyzer):
  
         # Regex fallback: recover clock-time expressions NER missed
         # entirely (mislabeled as something other than DATE/TIME).
-        for m in self._CLOCK_TIME_RE.finditer(raw_text):
+        for m in self.CMN_CLOCK_TIME_RE.finditer(raw_text):
             span = (m.start(), m.end())
             if any(span[0] < e and s < span[1] for s, e in ner_char_spans):
                 continue  # already covered by the NER pass above
