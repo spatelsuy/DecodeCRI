@@ -6,7 +6,7 @@ import spacy
 import dateparser
 
 
-_GENERIC_UNIT_WORDS = {
+CMN_GENERIC_UNIT_WORDS = {
     "second", "seconds",
     "minute", "minutes",
     "hour", "hours",
