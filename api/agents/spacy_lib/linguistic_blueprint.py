@@ -14,7 +14,8 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 import spacy
 import dateparser
- 
+
+from BaseAnalyzer import BaseAnalyzer
 # ==========================================================
 # CONFIG
 # ==========================================================
@@ -222,24 +223,6 @@ class LinguisticContext:
             prev = doc[ent.start - 1].text if ent.start > 0 else None
             print(f"{ent.text!r:25} label={ent.label_:8} start={ent.start} end={ent.end} prev_token={prev!r}")
         print("=" * 100 + "\n")
- 
- 
-# ==========================================================
-# ANALYZER INTERFACE
-# ==========================================================
-class BaseAnalyzer:
-    """
-    Common interface every analyzer implements. `key` is the name
-    used for this analyzer's output inside the blueprint's
-    "evidence" dict. To add a new analyzer: subclass this, set
-    `key`, implement `analyze`, and add an instance to
-    DEFAULT_ANALYZERS below (or pass a custom list) — nothing
-    else has to change.
-    """
-    key = None
- 
-    def analyze(self, doc, raw_text):
-        raise NotImplementedError
  
  
 class TemporalAnalyzer(BaseAnalyzer):
@@ -661,25 +644,6 @@ class CorrectionAnalyzer(BaseAnalyzer):
  
     def analyze(self, doc, raw_text):
         return _find_correction_markers(raw_text)
- 
- 
-class TypoAnalyzer(BaseAnalyzer):
-    key = "possible_typos"
-    _TYPO_RULES = {
-        "meeitng": "meeting",
-        "sent": "send"
-    }
- 
-    def analyze(self, doc, raw_text):
-        typos = []
-        lower = raw_text.lower()
-        for wrong, correct in self._TYPO_RULES.items():
-            if wrong in lower:
-                typos.append({
-                    "original": wrong,
-                    "suggestion": correct
-                })
-        return typos
  
  
 class EntityAnalyzer(BaseAnalyzer):
