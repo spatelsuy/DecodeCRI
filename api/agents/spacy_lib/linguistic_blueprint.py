@@ -21,6 +21,7 @@ from spacy_lib.Common import *
 from spacy_lib.BaseAnalyzer import BaseAnalyzer
 from spacy_lib.TypoAnalyzer import TypoAnalyzer
 from spacy_lib.EntityAnalyzer import EntityAnalyzer
+from spacy_lib.CorrectionAnalyzer import CorrectionAnalyzer
  
 # ==========================================================
 # LINGUISTIC CONTEXT
@@ -474,21 +475,6 @@ class RelationshipAnalyzer(BaseAnalyzer):
                         "text": p
                     })
         return hints
- 
- 
-class CorrectionAnalyzer(BaseAnalyzer):
-    """
-    Returns every correction marker with its character span, e.g.
-    "actually" at [19, 27), instead of a bare list of marker strings.
-    The span lets EntityAnalyzer (and, if extended later,
-    TemporalAnalyzer/ActionAnalyzer) determine which specific items
-    a correction applies to, rather than just knowing a correction
-    happened somewhere in the text.
-    """
-    key = "correction_signals"
- 
-    def analyze(self, doc, raw_text):
-        return cmn_find_correction_markers(raw_text)
  
  
 # MAIN BLUEPRINT GENERATOR
