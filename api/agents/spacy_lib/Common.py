@@ -84,6 +84,14 @@ CMN_WEEKDAY_QUALIFIER_RE = re.compile(
     re.IGNORECASE
 )
 
+# Matches clock times like "9am", "10 pm", "11:30am", "9 a.m." — used both to recover entities spaCy's NER mislabels, and to
+# re-clip NER spans that swallow adjacent non-time words. Hour is constrained to 1-12 (valid 12-hour clock range) and minutes to
+# 00-59, so invalid strings like "13am" or "3:65am" (which the unconstrained \d{1,2} version used to match) are correctly
+# rejected rather than passed through to dateparser.
+CMN_CLOCK_TIME_RE = re.compile(
+    r"\b(1[0-2]|[1-9])(?::([0-5]\d))?\s?(a\.?m\.?|p\.?m\.?)\b", re.IGNORECASE
+)
+
 DEFAULT_TIMEZONE = "America/New_York"
 
 
