@@ -22,80 +22,8 @@ from spacy_lib.BaseAnalyzer import BaseAnalyzer
 from spacy_lib.TypoAnalyzer import TypoAnalyzer
 
 
-
-# ==========================================================
-# CONFIG
-# ==========================================================
-# Bare unit words (no digit attached) that spaCy/dateparser often mislabel as DATE/TIME even when they're just ordinary nouns
-# (e.g. "meeting minutes", "see you in a few days").
-
-_NUMBER_WORD_RE = re.compile(
-    r"^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+)$", re.IGNORECASE
-)
- 
-_CORRECTION_MARKERS = [
-    "no no",
-    "actually",
-    "instead",
-    "wait",
-    "correction",
-    "i mean"
-]
-
-# Phrases that signal "what follows is a date", used to safely accept a bare N/N numeric pattern as a date rather than a fraction/score/
-# ratio (e.g. "1/2 cup", "the score was 7/20"). Longer/more specific phrases first so a substring match like "by" inside "due by" doesn't
-# fire before the fuller phrase is checked.
-_DATE_ANCHOR_PHRASES = [
-    "week of", "weeks of",
-    "due by", "due on", "due before",
-    "before", "after", "since", "until", "from",
-    "by", "on",
-]
- 
-_DATE_SLASH_RE = re.compile(
-    r"\b(1[0-2]|0?[1-9])/(3[01]|[12]\d|0?[1-9])(?:/\d{2,4})?\b"
-)
-
-_DATE_WORD_RE = re.compile(
-    r"\b(today|tomorrow|tonight|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", re.IGNORECASE
-)
-
-_DAYPART_TIMES = {
-    "morning": (9, 0), "afternoon": (15, 0), "after lunch": (14, 0),
-    "evening": (18, 0), "night": (21, 0), "noon": (12, 0), "midnight": (0, 0),
-}
-
-_WEEKDAY_RE = re.compile(
-    r"\b(?:(this|next|coming)\s+)?"
-    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
-    re.IGNORECASE
-)
-
-_WEEKDAY_QUALIFIED_DAYPART_RE = re.compile(
-    r"\b(this|next|coming)\s+"
-    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
-    r"(morning|afternoon|evening|night)\b",
-    re.IGNORECASE
-)
-
-_WEEKDAY_DAYPART_RE = re.compile(
-    r"(?<!this )(?<!next )(?<!coming )\b"
-    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+"
-    r"(morning|afternoon|evening|night|noon|midnight)\b",
-    re.IGNORECASE
-)
-
-_WEEKDAY_QUALIFIER_RE = re.compile(
-    r"\b(this|next|coming)\s+"
-    r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b"
-    r"(?!\s+(morning|afternoon|evening|night|noon|midnight))",
-    re.IGNORECASE
-)
-
-DEFAULT_TIMEZONE = "America/New_York"
-
 def _is_number_token(tok):
-    return tok.like_num or bool(_NUMBER_WORD_RE.match(tok.text))
+    return tok.like_num or bool(CMN_NUMBER_WORD_RE.match(tok.text))
  
 def _find_correction_markers(raw_text):
     """
@@ -105,7 +33,7 @@ def _find_correction_markers(raw_text):
     """
     markers = []
     lower = raw_text.lower()
-    for marker in _CORRECTION_MARKERS:
+    for marker in CMN_CORRECTION_MARKERS:
         start = 0
         while True:
             idx = lower.find(marker, start)
@@ -151,11 +79,11 @@ def ensure_timezone(dt, timezone_name=None):
  
 def _has_date_anchor_before(raw_text, match_start, window=20):
     """
-    True if one of _DATE_ANCHOR_PHRASES appears immediately (allowing trailing whitespace) before match_start. Prevents an N/N pattern
+    True if one of CMN_DATE_ANCHOR_PHRASES appears immediately (allowing trailing whitespace) before match_start. Prevents an N/N pattern
     from being treated as a date with no supporting context.
     """
     prefix = raw_text[max(0, match_start - window):match_start].lower().rstrip()
-    return any(prefix.endswith(phrase) for phrase in _DATE_ANCHOR_PHRASES)
+    return any(prefix.endswith(phrase) for phrase in CMN_DATE_ANCHOR_PHRASES)
  
 
 
@@ -246,7 +174,7 @@ class TemporalAnalyzer(BaseAnalyzer):
            self.base_date = ensure_timezone(base_date, timezone_name)
      
     def _is_explicit_date_entity(self, raw_text_around_span):
-        return bool(_DATE_WORD_RE.search(raw_text_around_span)) or bool(_DATE_SLASH_RE.search(raw_text_around_span))
+        return bool(CMN_DATE_WORD_RE.search(raw_text_around_span)) or bool(CMN_DATE_SLASH_RE.search(raw_text_around_span))
 
     def _resolve_weekday(self, weekday, qualifier=None):
         """
@@ -420,7 +348,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         # preceding date-anchor phrase ("week of", "due by", "on", ...)
         # so a fraction like "1/2 cup" or a score like "7/20" in an
         # unrelated context is not misread as a date.
-        for m in _DATE_SLASH_RE.finditer(raw_text):
+        for m in CMN_DATE_SLASH_RE.finditer(raw_text):
             span = (m.start(), m.end())
             if any(span[0] < e and s < span[1] for s, e in ner_char_spans):
                 continue  # already covered by an earlier pass
@@ -445,7 +373,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
         # Regex fallback #3: qualified weekday + daypart
         # Examples: "this Sunday night", "next Sunday night", "coming Sunday night"
-        for m in _WEEKDAY_QUALIFIED_DAYPART_RE.finditer(raw_text):
+        for m in CMN_WEEKDAY_QUALIFIED_DAYPART_RE.finditer(raw_text):
             raw = m.group()
             lower = raw.lower()
             qualifier, weekday, daypart = lower.split()
@@ -453,7 +381,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             if base_dt is None:
                 continue
         
-            hour, minute = _DAYPART_TIMES[daypart]
+            hour, minute = CMN_DAYPART_TIMES[daypart]
             dt = base_dt.replace(hour=hour, minute=minute, second=0, microsecond=0)
         
             temporal_entities.append({
@@ -463,7 +391,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             })
 
         # Regex fallback #4: recover weekday + daypart expressions (e.g. "Sunday night")
-        for m in _WEEKDAY_DAYPART_RE.finditer(raw_text):
+        for m in CMN_WEEKDAY_DAYPART_RE.finditer(raw_text):
             span = (m.start(), m.end())
             raw = m.group()
             lower = raw.lower()
@@ -481,7 +409,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             if len(parts) == 2 and parts[0] in {
                 "monday", "tuesday", "wednesday",
                 "thursday", "friday", "saturday", "sunday"
-            } and parts[1] in _DAYPART_TIMES:
+            } and parts[1] in CMN_DAYPART_TIMES:
             
                 weekday, daypart = parts
             
@@ -489,7 +417,7 @@ class TemporalAnalyzer(BaseAnalyzer):
                 base_dt = self._resolve_weekday(weekday)
             
                 if base_dt is not None:
-                    hour, minute = _DAYPART_TIMES[daypart]
+                    hour, minute = CMN_DAYPART_TIMES[daypart]
                     dt = base_dt.replace(hour=hour, minute=minute)
                 else:
                     dt = None
@@ -512,7 +440,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
         # Regex fallback #5: qualified weekdays
         # Examples: "this Sunday", "next Sunday", "coming Sunday"
-        for m in _WEEKDAY_QUALIFIER_RE.finditer(raw_text):
+        for m in CMN_WEEKDAY_QUALIFIER_RE.finditer(raw_text):
             span = (m.start(), m.end())
             raw = m.group()
             lower = raw.lower()
@@ -680,7 +608,7 @@ class EntityAnalyzer(BaseAnalyzer):
                 if TemporalAnalyzer._CLOCK_TIME_RE.fullmatch(ent.text.strip()):
                     possibly_mislabeled = True
                     suggested_type = "TIME"
-                elif _DATE_SLASH_RE.fullmatch(ent.text.strip()) and _has_date_anchor_before(raw_text, ent.start_char):
+                elif CMN_DATE_SLASH_RE.fullmatch(ent.text.strip()) and _has_date_anchor_before(raw_text, ent.start_char):
                     possibly_mislabeled = True
                     suggested_type = "DATE"
  
