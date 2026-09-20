@@ -20,73 +20,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from spacy_lib.Common import *
 from spacy_lib.BaseAnalyzer import BaseAnalyzer
 from spacy_lib.TypoAnalyzer import TypoAnalyzer
-
-
-def _is_number_token(tok):
-    return tok.like_num or bool(CMN_NUMBER_WORD_RE.match(tok.text))
- 
-def _find_correction_markers(raw_text):
-    """
-    Returns every correction-marker occurrence in raw_text with its character span, e.g. [{"text": "actually", "start_char": 19,
-    "end_char": 27}]. Single source of truth shared by CorrectionAnalyzer and EntityAnalyzer so both agree on where
-    corrections happen instead of each re-deriving it separately.
-    """
-    markers = []
-    lower = raw_text.lower()
-    for marker in CMN_CORRECTION_MARKERS:
-        start = 0
-        while True:
-            idx = lower.find(marker, start)
-            if idx == -1:
-                break
-            markers.append({
-                "text": marker,
-                "start_char": idx,
-                "end_char": idx + len(marker)
-            })
-            start = idx + len(marker)
-    return markers
- 
- 
-def _earliest_marker(markers):
-    """
-    Given markers already filtered to one sentence, returns the earliest one. Only the first marker in a sentence acts as the
-    correction pivot -- a later marker (e.g. "instead" reinforcing an already-corrected value) must not re-flag the corrected value
-    itself as superseded.
-    """
-    return min(markers, key=lambda m: m["start_char"]) if markers else None
-
-def get_timezone(timezone_name=None):
-    """
-    Return the configured ZoneInfo timezone. All temporal processing in this module should use this timezone.
-    """
-    return ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
-
-def get_local_now(timezone_name=None):
-    """
-    Return the current timezone-aware datetime in the configured timezone.
-    """
-    return datetime.now(get_timezone(timezone_name))
-
-def ensure_timezone(dt, timezone_name=None):
-    """
-    Ensure a datetime is timezone-aware and expressed in the configured timezone.
-    """
-    tz = get_timezone(timezone_name)
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=tz)
-    return dt.astimezone(tz)
- 
-def _has_date_anchor_before(raw_text, match_start, window=20):
-    """
-    True if one of CMN_DATE_ANCHOR_PHRASES appears immediately (allowing trailing whitespace) before match_start. Prevents an N/N pattern
-    from being treated as a date with no supporting context.
-    """
-    prefix = raw_text[max(0, match_start - window):match_start].lower().rstrip()
-    return any(prefix.endswith(phrase) for phrase in CMN_DATE_ANCHOR_PHRASES)
- 
-
-
  
 # ==========================================================
 # LINGUISTIC CONTEXT
@@ -167,11 +100,11 @@ class TemporalAnalyzer(BaseAnalyzer):
   
     def __init__(self, base_date=None, timezone_name=DEFAULT_TIMEZONE):
        self.timezone_name = timezone_name
-       self.local_tz = get_timezone(timezone_name)   
+       self.local_tz = cmn_get_timezone(timezone_name)   
        if base_date is None:
            self.base_date = datetime.now(self.local_tz)
        else:
-           self.base_date = ensure_timezone(base_date, timezone_name)
+           self.base_date = cmn_ensure_timezone(base_date, timezone_name)
      
     def _is_explicit_date_entity(self, raw_text_around_span):
         return bool(CMN_DATE_WORD_RE.search(raw_text_around_span)) or bool(CMN_DATE_SLASH_RE.search(raw_text_around_span))
@@ -293,7 +226,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             # but "meeting minutes" is not a duration at all.
             if lower in CMN_GENERIC_UNIT_WORDS:
                 prev_tok = doc[ent.start - 1] if ent.start > 0 else None
-                if prev_tok is None or not _is_number_token(prev_tok):
+                if prev_tok is None or not cmn_is_number_token(prev_tok):
                     continue
  
             # If this is a TIME entity but NER over-extended the span
@@ -352,7 +285,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             span = (m.start(), m.end())
             if any(span[0] < e and s < span[1] for s, e in ner_char_spans):
                 continue  # already covered by an earlier pass
-            if not _has_date_anchor_before(raw_text, m.start()):
+            if not cmn_has_date_anchor_before(raw_text, m.start()):
                 continue  # no date context -- likely a fraction/score/ratio
  
             raw = m.group()
@@ -562,7 +495,7 @@ class CorrectionAnalyzer(BaseAnalyzer):
     key = "correction_signals"
  
     def analyze(self, doc, raw_text):
-        return _find_correction_markers(raw_text)
+        return cmn_find_correction_markers(raw_text)
  
  
 class EntityAnalyzer(BaseAnalyzer):
@@ -590,7 +523,7 @@ class EntityAnalyzer(BaseAnalyzer):
     key = "entities"
  
     def analyze(self, doc, raw_text):
-        markers = _find_correction_markers(raw_text)
+        markers = cmn_find_correction_markers(raw_text)
  
         entities = []
         for ent in doc.ents:
@@ -599,7 +532,7 @@ class EntityAnalyzer(BaseAnalyzer):
                 m for m in markers
                 if sent.start_char <= m["start_char"] < sent.end_char
             ]
-            pivot = _earliest_marker(same_sent_markers)
+            pivot = cmn_earliest_marker(same_sent_markers)
             possibly_superseded = pivot is not None and ent.end_char <= pivot["start_char"]
  
             possibly_mislabeled = False
@@ -608,7 +541,7 @@ class EntityAnalyzer(BaseAnalyzer):
                 if TemporalAnalyzer._CLOCK_TIME_RE.fullmatch(ent.text.strip()):
                     possibly_mislabeled = True
                     suggested_type = "TIME"
-                elif CMN_DATE_SLASH_RE.fullmatch(ent.text.strip()) and _has_date_anchor_before(raw_text, ent.start_char):
+                elif CMN_DATE_SLASH_RE.fullmatch(ent.text.strip()) and cmn_has_date_anchor_before(raw_text, ent.start_char):
                     possibly_mislabeled = True
                     suggested_type = "DATE"
  
@@ -638,11 +571,11 @@ def _default_analyzers(base_date, timezone_name=DEFAULT_TIMEZONE):
  
 def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None, timezone_name=DEFAULT_TIMEZONE):
     print("GENERATING BLUEPRINT CALLED " + timezone_name)
-    local_tz = get_timezone(timezone_name)
+    local_tz = cmn_get_timezone(timezone_name)
     if base_date is None:
         base_date = datetime.now(local_tz).replace(microsecond=0)
     else:
-        base_date = ensure_timezone(base_date, timezone_name)
+        base_date = cmn_ensure_timezone(base_date, timezone_name)
 
     print("Base Date is setup")
     context = context or LinguisticContext(debug=False)
