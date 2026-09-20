@@ -15,6 +15,9 @@ from zoneinfo import ZoneInfo
 import spacy
 import dateparser
 
+sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from BaseAnalyzer import BaseAnalyzer
 # ==========================================================
 # CONFIG
