@@ -457,26 +457,6 @@ class ActionAnalyzer(BaseAnalyzer):
         return actions
  
  
-class RelationshipAnalyzer(BaseAnalyzer):
-    key = "relationship_hints"
-    _PATTERNS = {
-        "AFTER": ["after", "once done"],
-        "BEFORE": ["before", "prior to"],
-    }
- 
-    def analyze(self, doc, raw_text):
-        hints = []
-        lower = raw_text.lower()
-        for relation, patterns in self._PATTERNS.items():
-            for p in patterns:
-                if p in lower:
-                    hints.append({
-                        "type": relation,
-                        "text": p
-                    })
-        return hints
- 
- 
 # MAIN BLUEPRINT GENERATOR
 def _default_analyzers(base_date, timezone_name=DEFAULT_TIMEZONE):
     return [
