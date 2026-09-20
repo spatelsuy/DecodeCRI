@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from spacy_lib.BaseAnalyzer import BaseAnalyzer
+from spacy_lib.TypoAnalyzer import TypoAnalyzer
 # ==========================================================
 # CONFIG
 # ==========================================================
