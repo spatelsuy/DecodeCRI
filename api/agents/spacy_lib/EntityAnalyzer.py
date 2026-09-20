@@ -8,11 +8,9 @@ from zoneinfo import ZoneInfo
 import spacy
 import dateparser
 
-sys.path.insert(0, os.path.dirname(__file__))
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from spacy_lib.Common import *
-from spacy_lib.BaseAnalyzer import BaseAnalyzer
+from Common import *
+from BaseAnalyzer import BaseAnalyzer
 
 
 class EntityAnalyzer(BaseAnalyzer):
