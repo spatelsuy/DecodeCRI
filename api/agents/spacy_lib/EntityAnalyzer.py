@@ -46,7 +46,7 @@ class EntityAnalyzer(BaseAnalyzer):
             possibly_mislabeled = False
             suggested_type = None
             if ent.label_ not in ("DATE", "TIME"):
-                if TemporalAnalyzer._CLOCK_TIME_RE.fullmatch(ent.text.strip()):
+                if TemporalAnalyzer.CMN_CLOCK_TIME_RE.fullmatch(ent.text.strip()):
                     possibly_mislabeled = True
                     suggested_type = "TIME"
                 elif CMN_DATE_SLASH_RE.fullmatch(ent.text.strip()) and cmn_has_date_anchor_before(raw_text, ent.start_char):
