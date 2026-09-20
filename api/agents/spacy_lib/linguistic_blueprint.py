@@ -204,28 +204,22 @@ class TemporalAnalyzer(BaseAnalyzer):
             # Return original temporal entities instead of crashing
             return temporal_entities
 
-    def analyze(self, doc, raw_text):
-        temporal_entities = []
-        seen = set()
-        ner_char_spans = []  # (start_char, end_char) already consumed by NER pass
- 
+    def _process_ner_temporal_spans(self, doc, seen: set, temporal_entities: list, ner_char_spans: list):
         for ent in doc.ents:
             if ent.label_ not in ("DATE", "TIME"):
                 continue
- 
+             
             raw = ent.text.strip()
             lower = raw.lower()
  
-            # Reject bare unit words ("minutes", "days", ...) unless a
-            # number actually precedes them, e.g. "30 minutes" is fine
+            # Reject bare unit words ("minutes", "days", ...) unless a number actually precedes them, e.g. "30 minutes" is fine
             # but "meeting minutes" is not a duration at all.
             if lower in CMN_GENERIC_UNIT_WORDS:
                 prev_tok = doc[ent.start - 1] if ent.start > 0 else None
                 if prev_tok is None or not cmn_is_number_token(prev_tok):
                     continue
  
-            # If this is a TIME entity but NER over-extended the span
-            # to include non-time words (e.g. "9am PST Hari"), re-clip
+            # If this is a TIME entity but NER over-extended the span to include non-time words (e.g. "9am PST Hari"), re-clip
             # it down to just the clock-time pattern.
             clock_match = CMN_CLOCK_TIME_RE.search(raw)
             if ent.label_ == "TIME" and clock_match and clock_match.group() != raw:
@@ -248,6 +242,12 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "_start_char": ent.start_char
             })
  
+    def analyze(self, doc, raw_text):
+        temporal_entities = []
+        seen = set()
+        ner_char_spans = []  # (start_char, end_char) already consumed by NER pass
+        _process_ner_temporal_spans(doc, seen, temporal_entities, ner_char_spans)
+     
         # Regex fallback: recover clock-time expressions NER missed
         # entirely (mislabeled as something other than DATE/TIME).
         for m in CMN_CLOCK_TIME_RE.finditer(raw_text):
