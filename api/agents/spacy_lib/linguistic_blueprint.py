@@ -579,16 +579,21 @@ def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None, t
     else:
         base_date = ensure_timezone(base_date, timezone_name)
 
+    print("Base Date is setup")
     context = context or LinguisticContext(debug=False)
     analyzers = (
         analyzers
         if analyzers is not None
         else _default_analyzers(base_date, timezone_name)
     )
+    print("Analyzer is set")
     doc = context.parse(raw_text)
+    print("DOC is set")
     evidence = {}
     for analyzer in analyzers:
         evidence[analyzer.key] = analyzer.analyze(doc, raw_text)
+    
+    print("Analyzed ALL")
     return {
         "user_speech_transcript": raw_text, "language": "en", "timezone": timezone_name, "current_date": base_date.isoformat(), "evidence": evidence
     }
