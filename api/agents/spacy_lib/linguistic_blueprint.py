@@ -28,15 +28,6 @@ from spacy_lib.TypoAnalyzer import TypoAnalyzer
 # ==========================================================
 # Bare unit words (no digit attached) that spaCy/dateparser often mislabel as DATE/TIME even when they're just ordinary nouns
 # (e.g. "meeting minutes", "see you in a few days").
-_GENERIC_UNIT_WORDS = {
-    "second", "seconds",
-    "minute", "minutes",
-    "hour", "hours",
-    "day", "days",
-    "week", "weeks",
-    "month", "months",
-    "year", "years",
-}
 
 _NUMBER_WORD_RE = re.compile(
     r"^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+)$", re.IGNORECASE
