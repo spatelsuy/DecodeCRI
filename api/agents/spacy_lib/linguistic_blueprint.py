@@ -246,8 +246,9 @@ class TemporalAnalyzer(BaseAnalyzer):
         temporal_entities = []
         seen = set()
         ner_char_spans = []  # (start_char, end_char) already consumed by NER pass
-        _process_ner_temporal_spans(doc, seen, temporal_entities, ner_char_spans)
-     
+        print("Good")
+        self._process_ner_temporal_spans(doc, seen, temporal_entities, ner_char_spans)
+        print("Very good")
         # Regex fallback: recover clock-time expressions NER missed
         # entirely (mislabeled as something other than DATE/TIME).
         for m in CMN_CLOCK_TIME_RE.finditer(raw_text):
