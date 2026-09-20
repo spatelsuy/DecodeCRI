@@ -363,7 +363,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             # Reject bare unit words ("minutes", "days", ...) unless a
             # number actually precedes them, e.g. "30 minutes" is fine
             # but "meeting minutes" is not a duration at all.
-            if lower in _GENERIC_UNIT_WORDS:
+            if lower in CMN_GENERIC_UNIT_WORDS:
                 prev_tok = doc[ent.start - 1] if ent.start > 0 else None
                 if prev_tok is None or not _is_number_token(prev_tok):
                     continue
