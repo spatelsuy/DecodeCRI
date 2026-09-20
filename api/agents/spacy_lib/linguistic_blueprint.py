@@ -592,6 +592,7 @@ def generate_blueprint(raw_text, context=None, analyzers=None, base_date=None, t
     evidence = {}
     for analyzer in analyzers:
         evidence[analyzer.key] = analyzer.analyze(doc, raw_text)
+        print("KEY = " + analyzer.key)
     
     print("Analyzed ALL")
     return {
