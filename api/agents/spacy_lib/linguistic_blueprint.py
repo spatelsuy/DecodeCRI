@@ -24,7 +24,7 @@ from spacy_lib.EntityAnalyzer import EntityAnalyzer
 from spacy_lib.CorrectionAnalyzer import CorrectionAnalyzer
 from spacy_lib.RelationshipAnalyzer import RelationshipAnalyzer
 from spacy_lib.TemporalAnalyzer import TemporalAnalyzer
-from spacy_lib.ActionAnalyze import ActionAnalyze
+from spacy_lib.ActionAnalyzer import ActionAnalyzer
  
 # ==========================================================
 # LINGUISTIC CONTEXT
