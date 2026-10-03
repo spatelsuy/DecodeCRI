@@ -11,7 +11,7 @@ import dateparser
 from Common import *
 from BaseAnalyzer import BaseAnalyzer
 
-class TemporalAnalyzer(BaseAnalyzer):
+class TemporalAnalyzerOLD(BaseAnalyzer):
     """
     Uses spaCy's DATE/TIME entity spans (reliable boundaries) as candidates, then resolves each span individually with
     dateparser.parse. This avoids the free-form phrase-boundary bugs in dateparser.search_dates, which can slurp in unrelated
