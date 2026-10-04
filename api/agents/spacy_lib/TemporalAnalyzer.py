@@ -597,12 +597,14 @@ class TemporalAnalyzer(BaseAnalyzer):
             if shared_ancestor.pos_ not in {"VERB", "AUX"}:
                 continue
 
-            # Prefer the straightforward case where the activity noun
-            # is directly attached to the shared verb, such as:
-            # meeting -> have
-            if candidate.head.i != shared_ancestor.i:
+            directly_attached = candidate.head.i == shared_ancestor.i
+            prep_attached = (
+                candidate.head.dep_ == "prep"
+                and candidate.head.head.i == shared_ancestor.i
+            )
+            if not (directly_attached or prep_attached):
                 continue
-
+            
             fallback_matches.append((candidate, temporal_distance + candidate_distance))
 
     # Deduplicate candidates in case more than one shared ancestor
