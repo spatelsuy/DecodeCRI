@@ -37,8 +37,8 @@ DATE_PATTERNS = [
 ]
 
 TIME_PATTERNS = [
-    r"\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b",
-    r"\b\d{1,2}:\d{2}\b",
+    r"\b(?:1[0-2]|0?[1-9])(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)\b",
+    r"\b(?:[01]?\d|2[0-3]):\d{2}\b",
     r"\b(?:morning|afternoon|evening|tonight|midday|midnight|noon)\b",
 ]
 
@@ -137,9 +137,10 @@ RELATIVE_DAY_RE = re.compile(
 )
 
 CLOCK_TIME_RE = re.compile(
-    r"\b(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?\s*(?P<meridiem>a\.?m\.?|p\.?m\.?)\b",
+    r"\b(?P<hour>1[0-2]|0?[1-9])(?::(?P<minute>\d{2}))?\s*(?P<meridiem>a\.?m\.?|p\.?m\.?)\b",
     re.IGNORECASE,
 )
+
 
 PERIOD_RE = re.compile(
     r"\b(morning|noon|midday|afternoon|evening|night|tonight|midnight)\b",
