@@ -158,14 +158,6 @@ You will receive a JSON payload with two keys. Treat them as follows:
 3. "linguistic_blueprint" JSON object containing "temporal_entities" -- a list of date/time expressions already resolved by a deterministic calendar engine, each with "text",
 "resolved_datetime", "recurring", and "activity".
 
-For EACH item in "extracted_json" whose date/time differs from what you'd expect based on "temporal_entities" (matching by overlapping source_segment text and/or activity), do NOT
-silently correct it yet. Instead, keep the original "extracted_json" date/time unchanged, and add an entry to a top-level "audit_log" array describing:
-  - which item it was (category + title)
-  - the date/time in "extracted_json"
-  - the matching "resolved_datetime" in "temporal_entities"
-  - your reasoning for why they differ (e.g. which "next <weekday>" convention you applied)
-
-
 
 AUDIT CHECKLIST:
 1. MISSING DATA: Compare "user_speech_transcript" to "extracted_json". Are there any tasks, events, or reminders present in the transcript that were left out of the JSON? If so, add them.
@@ -184,10 +176,6 @@ Fix any errors found during the audit.
 CRITICAL: Return ONLY the raw schema object containing the keys "extracted_on", "tasks", "events", "reminders", and "notes". Do NOT wrap your response inside "extracted_json", "user_payload", or any other nested root key.
 Output ONLY the finalized, repaired, and structurally valid JSON object matching the original flat schema. 
 Do not include markdown formatting, backticks, or any conversational text.
-
-OUTPUT INSTRUCTIONS (temporary, for debugging):
-Return the normal schema object ("extracted_on", "tasks", "events", "reminders", "notes") PLUS
-the "audit_log" array described above. This audit_log key is temporary for debugging only.
 
 """
 
