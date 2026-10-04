@@ -11,8 +11,17 @@ import dateparser
 from Common import *
 from BaseAnalyzer import BaseAnalyzer
 
+# NOTE: the (?:...) grouping here is load-bearing. Without it, every
+# pattern that splices WEEKDAYS into a larger f-string pattern breaks:
+# `|` has lower precedence than concatenation, so e.g.
+# rf"\bnext\s+to\s+next\s+{WEEKDAYS}\b" without grouping compiles to
+# "\bnext\s+to\s+next\s+Monday|Tuesday|...|Sunday\b" -- seven independent
+# alternatives, where only "next to next Monday" actually requires the
+# prefix at all. This was previously masked because spaCy's own NER usually
+# tagged common phrasings correctly on its own, so the regex fallback's
+# brokenness rarely got exercised.
 WEEKDAYS = (
-    r"Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday"
+    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)"
 )
 
 DATE_PATTERNS = [
@@ -21,6 +30,7 @@ DATE_PATTERNS = [
     r"\btomorrow\b",
     r"\btoday\b",
     r"\byesterday\b",
+    rf"\bnext\s+to\s+next\s+{WEEKDAYS}\b",
     rf"\b(?:this|next|coming|following|last|previous|upcoming)\s+{WEEKDAYS}\b",
     rf"\b{WEEKDAYS}\s+after next\b",
     rf"\b{WEEKDAYS}\b",
@@ -75,7 +85,9 @@ EVENT_NOUNS = {
     "webinar",
     "deadline",
     "celebration",
+    "leave", "vacation", "holiday", "off",  # "on leave", "day off", etc.
 }
+
 PCOMP_ACTIVITY_PREPS = {"for"}
 WEEKDAY_INDEX = {
     "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
@@ -105,6 +117,13 @@ WEEKDAY_RE = re.compile(
     re.IGNORECASE,
 )
 
+# "Skip two occurrences" idioms. Must be checked BEFORE WEEKDAY_RE:
+# - "next to next Tuesday" matches WEEKDAY_RE on just its second
+#   "next Tuesday" substring, silently dropping "next to" and giving a
+#   date one week too early.
+# - "Tuesday after next" matches WEEKDAY_RE with modifier=None (the
+#   modifier group only looks BEFORE the weekday), so it's misread as a
+#   bare weekday (nearest occurrence) instead of two weeks out.
 DOUBLE_NEXT_RE = re.compile(
     rf"\bnext\s+to\s+next\s+(?P<weekday>{WEEKDAYS})\b", re.IGNORECASE
 )
@@ -493,9 +512,13 @@ class TemporalAnalyzer(BaseAnalyzer):
         text, start_char, end_char = result
         expanded.append({**item, "text": text, "start_char": start_char, "end_char": end_char})
 
-    # Deduplicate by overlap (expansion means spans from different
-    # sources rarely share exact (start,end) anymore). Prefer the
-    # spaCy entity record when spans overlap.
+    # Sort so that, among overlapping spans, the LONGEST one wins -- not
+    # whichever source happens to come first. spaCy's NER sometimes tags
+    # only part of a phrase (e.g. "Tuesday" alone inside "Tuesday after
+    # next"), while the regex fallback captures the complete idiom; if
+    # both start at the same character, preferring spacy_entity
+    # unconditionally would silently keep the shorter, wrong span.
+    # Only once length is equal do we prefer spacy_entity as a tiebreak.
     expanded.sort(key=lambda x: (x["start_char"], -(x["end_char"] - x["start_char"]), x["source"] != "spacy_entity"))
 
     unique = []
@@ -710,4 +733,3 @@ class TemporalAnalyzer(BaseAnalyzer):
     temporal_activities = self.extract_temporal_activities(doc, raw_text)
     final_output = self.build_temporal_entities(temporal_activities)
     return final_output
-    
