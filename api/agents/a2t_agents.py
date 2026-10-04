@@ -155,9 +155,6 @@ INSTRUCTIONS FOR READING THE INPUT PAYLOAD:
 You will receive a JSON payload with two keys. Treat them as follows:
 1. "user_speech_transcript" -> This contains the raw spoken text from the user. Use this as your source of truth.
 2. "extracted_json" -> This contains the first-pass structural data that you need to audit, verify, and correct.
-3. "linguistic_blueprint" JSON object containing "temporal_entities" -- a list of date/time expressions already resolved by a deterministic calendar engine, each with "text",
-"resolved_datetime", "recurring", and "activity".
-
 
 AUDIT CHECKLIST:
 1. MISSING DATA: Compare "user_speech_transcript" to "extracted_json". Are there any tasks, events, or reminders present in the transcript that were left out of the JSON? If so, add them.
@@ -331,7 +328,7 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
  
     user_payload = {
       "user_speech_transcript": text_to_analyze,
-      "linguistic_blueprint": linguistic_blueprint,
+      #"linguistic_blueprint": linguistic_blueprint,
       "extracted_json": json_to_analyze
     }
  
