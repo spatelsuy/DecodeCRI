@@ -278,9 +278,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     return reference_date + timedelta(days=diff)
   
   def _resolve_time_of_day(self, text):
-    print("888")
     match = CLOCK_TIME_RE.search(text)
-    print("888-1")
     if match:
         hour = int(match.group("hour"))
         minute = int(match.group("minute") or 0)
@@ -289,20 +287,16 @@ class TemporalAnalyzer(BaseAnalyzer):
             hour += 12
         if meridiem == "am" and hour == 12:
             hour = 0
-        print("888-3")
         return hour, minute
 
     match = PERIOD_RE.search(text)
     if match:
-        print("888-4")
         return PERIOD_DEFAULTS[match.group(1).lower()]
 
-    print("8888")
     return None
 
 
   def resolve_combined_temporal(self, combined_text, reference_dt):
-    print("88")
     lowered = combined_text.lower()
     reference_date = reference_dt.date()
 
@@ -328,27 +322,18 @@ class TemporalAnalyzer(BaseAnalyzer):
         )
 
     time_of_day = self._resolve_time_of_day(combined_text)
-    print("888-4")
 
     if target_date is None and time_of_day is None:
-        print("888-5")
         return None, is_recurring, "unresolved"
 
     if target_date is None:
         target_date = reference_date
 
     hour, minute = time_of_day if time_of_day else (0, 0)
-    print("888-6")
-    print("TIMEZONE", self.timezone_name)
-    print(target_date)
-    print(hour)
-    print(minute)
-    print("888-7")
     try:
         resolved_dt = datetime.combine(target_date, time(hour, minute), tzinfo=ZoneInfo(self.timezone_name))
     except Exception as e:
         print(f"Unexpected error: {e}")
-    print("888-2")
     return resolved_dt.isoformat(), is_recurring, "explicit"
 
 
@@ -445,7 +430,6 @@ class TemporalAnalyzer(BaseAnalyzer):
 
   
   def find_temporal_spans(self, doc):
-    print("11")
     found = []
     for ent in doc.ents:
         if ent.label_ in {"DATE", "TIME"}:
@@ -496,7 +480,6 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     #print("temporal span")
     #print(unique)
-    print("12")
     return sorted(unique, key=lambda x: x["start_char"])
 
 
@@ -599,13 +582,9 @@ class TemporalAnalyzer(BaseAnalyzer):
   
   
   def extract_temporal_activities(self, doc, text):
-    print("1")
     temporal_spans = self.find_temporal_spans(doc)
-    print("2")
     activities = self.find_activity_candidates(doc)
-    print("3")
     self.debug_temporal_paths(doc, temporal_spans)
-    print("4")
     # One result bucket per activity token.
     results = {}
     for activity in activities:
@@ -616,7 +595,6 @@ class TemporalAnalyzer(BaseAnalyzer):
             "temporal_expressions": [],
         }
 
-    print("5")
     # Associate each temporal expression with an activity using
     # the dependency path from its token(s).
     for span in temporal_spans:
@@ -662,12 +640,11 @@ class TemporalAnalyzer(BaseAnalyzer):
             expression_result
         )
 
-        print(
-            f"{span['text']!r} "
-            f"--> activity={associated_activity.text!r} "
-            f"(dependency-supported)"
-        )
-    print("6")
+        #print(
+        #    f"{span['text']!r} "
+        #    f"--> activity={associated_activity.text!r} "
+        #    f"(dependency-supported)"
+        #)
     # Return only activities that received at least one temporal
     # expression. Keep all their original temporal wording.
     output = []
@@ -679,11 +656,9 @@ class TemporalAnalyzer(BaseAnalyzer):
             )
             output.append(item)
 
-    print("7")
     return output
 
   def build_temporal_entities(self, temporal_activities, reference_dt=None):
-    print("8")
     if reference_dt is None:
         reference_dt = datetime.now(ZoneInfo(self.timezone_name))
 
@@ -707,7 +682,6 @@ class TemporalAnalyzer(BaseAnalyzer):
             # drop this key if you only want the fields shown above.
             "activity": item["activity"],
         })
-    print("9")
     #return {"temporal_entities": temporal_entities}
     return temporal_entities
   
