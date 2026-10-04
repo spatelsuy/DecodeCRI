@@ -586,9 +586,11 @@ class TemporalAnalyzer(BaseAnalyzer):
   def extract_temporal_activities(self, doc, text):
     print("1")
     temporal_spans = self.find_temporal_spans(doc)
+    print("2")
     activities = self.find_activity_candidates(doc)
+    print("3")
     self.debug_temporal_paths(doc, temporal_spans)
-
+    print("4")
     # One result bucket per activity token.
     results = {}
     for activity in activities:
@@ -599,6 +601,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             "temporal_expressions": [],
         }
 
+    print("5")
     # Associate each temporal expression with an activity using
     # the dependency path from its token(s).
     for span in temporal_spans:
@@ -628,7 +631,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             "end_char": span["end_char"],
             "source": span["source"],
         }
-
+        
         if associated_activity is None:
             expression_result["association"] = "unresolved"
             expression_result["activity_token"] = None
@@ -650,7 +653,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             f"--> activity={associated_activity.text!r} "
             f"(dependency-supported)"
         )
-
+    print("6")
     # Return only activities that received at least one temporal
     # expression. Keep all their original temporal wording.
     output = []
@@ -662,7 +665,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             )
             output.append(item)
 
-    print("2")
+    print("7")
     return output
 
   def build_temporal_entities(self, temporal_activities, reference_dt=None):
