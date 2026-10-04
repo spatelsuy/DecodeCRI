@@ -708,7 +708,8 @@ class TemporalAnalyzer(BaseAnalyzer):
             "activity": item["activity"],
         })
     print("9")
-    return {"temporal_entities": temporal_entities}
+    #return {"temporal_entities": temporal_entities}
+    return temporal_entities
   
 
   def analyze(self, doc, raw_text):
