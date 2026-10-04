@@ -68,7 +68,8 @@ async def transcribe_text(
             "file_bytes": "",
             "file_name": "dummy.webm",
             "transcription_text": text,
-            "categorization_json": None
+            "categorization_json": None, 
+            "linguistic_blueprint": None
         }
         print("Text =", initial_state.get("transcription_text"))
         # 3. Synchronously invoke the LangGraph pipeline
@@ -110,7 +111,8 @@ async def transcribe_audio(
         "file_bytes": audio_content,
         "file_name": file.filename or "recording.webm",
         "transcription_text": None,
-        "categorization_json": None
+        "categorization_json": None, 
+        "linguistic_blueprint": None
     }
     try:
         print("INVOKING TRANSCRIBE ONLY GRAPH")
@@ -150,7 +152,8 @@ async def transcribe_audio(
         "file_bytes": audio_content,
         "file_name": file.filename or "recording.webm",
         "transcription_text": None,
-        "categorization_json": None
+        "categorization_json": None, 
+        "linguistic_blueprint": None
     }
     #print("Filename =", initial_state.get("file_name"))
     try:
