@@ -232,17 +232,18 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
 
 
 def validate_and_ground_times(
-    extracted_json: dict = None, 
-    categorized_data: dict = None, 
-    blueprint_temporal_entities: list = None,
-    **kwargs
-) -> dict:
+   extracted_json: dict = None, 
+   blueprint: dict = None, 
+   client_time: str= None
+) -> dict: 
+
     """
     Ensures extracted event/task timestamps strictly match valid timestamps 
     generated in Stage 1, while tolerating end-of-day offsets and LLM timezone corrections.
     """
+   blueprint_temporal_entities = blueprint
     # Standardize input dictionary parameter
-    data = extracted_json or categorized_data or {}
+    data = extracted_json or {}
     if not data or not blueprint_temporal_entities:
         return data
 
