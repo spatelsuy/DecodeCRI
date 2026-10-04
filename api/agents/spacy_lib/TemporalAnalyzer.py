@@ -105,6 +105,13 @@ WEEKDAY_RE = re.compile(
     re.IGNORECASE,
 )
 
+DOUBLE_NEXT_RE = re.compile(
+    rf"\bnext\s+to\s+next\s+(?P<weekday>{WEEKDAYS})\b", re.IGNORECASE
+)
+AFTER_NEXT_RE = re.compile(
+    rf"\b(?P<weekday>{WEEKDAYS})\s+after\s+next\b", re.IGNORECASE
+)
+
 RELATIVE_DAY_RE = re.compile(
     r"\b(?P<rel>day after tomorrow|two days from now|tomorrow|today|yesterday)\b",
     re.IGNORECASE,
@@ -153,7 +160,6 @@ class TemporalAnalyzer(BaseAnalyzer):
     return text, new_start, new_end
 
   def tokens_overlapping_span(self, doc, start_char, end_char):
-    """Return tokens that overlap a character span."""
     return [
         token for token in doc
         if token.idx < end_char
@@ -161,7 +167,6 @@ class TemporalAnalyzer(BaseAnalyzer):
     ]
 
   def dependency_path(self, token):
-    """Return token -> parent -> ... -> root."""
     path = [token]
     current = token
 
@@ -172,7 +177,6 @@ class TemporalAnalyzer(BaseAnalyzer):
     return path
 
   def ancestor_chain(self, token):
-    """Plain bottom-up ancestor path: token -> head -> head -> ... -> ROOT."""
     path = []
     current = token
     visited = set()
@@ -238,7 +242,6 @@ class TemporalAnalyzer(BaseAnalyzer):
     """
     Return a dictionary mapping each ancestor token to its distance
     from the supplied token.
-
     The token itself is included at distance 0.
     """
     distances = {}
@@ -247,13 +250,10 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     while current.i not in distances:
         distances[current.i] = (current, distance)
-
         if current.head == current:
             break
-
         current = current.head
         distance += 1
-
     return distances
   
 
@@ -269,6 +269,13 @@ class TemporalAnalyzer(BaseAnalyzer):
             diff_back = 7
         return reference_date - timedelta(days=diff_back)
 
+    if modifier == "double_next":
+        # "next to next <weekday>" / "<weekday> after next": skip TWO
+        # occurrences, not one.
+        if diff == 0:
+            diff = 7
+        return reference_date + timedelta(days=diff + 14)      
+
     if modifier in SKIP_MODIFIERS:
         if diff == 0:
             diff = 7
@@ -276,7 +283,29 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     # Plain weekday, or this/coming/upcoming/following.
     return reference_date + timedelta(days=diff)
-  
+
+  def _find_weekday_match(self, text):
+    """
+    Checks the 'skip two occurrences' idioms first -- otherwise they'd be
+    swallowed or misread by the plain single-modifier WEEKDAY_RE (see the
+    comment above DOUBLE_NEXT_RE/AFTER_NEXT_RE). Returns a
+    (weekday_name, modifier) tuple, or None if nothing matched.
+    """
+    m = DOUBLE_NEXT_RE.search(text)
+    if m:
+        return m.group("weekday"), "double_next"
+ 
+    m = AFTER_NEXT_RE.search(text)
+    if m:
+        return m.group("weekday"), "double_next"
+ 
+    m = WEEKDAY_RE.search(text)
+    if m:
+        return m.group("weekday"), m.group("modifier")
+ 
+    return None
+
+
   def _resolve_time_of_day(self, text):
     match = CLOCK_TIME_RE.search(text)
     if match:
@@ -307,7 +336,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     target_date = None
 
     rel_match = RELATIVE_DAY_RE.search(lowered)
-    weekday_match = WEEKDAY_RE.search(combined_text)
+    weekday_match = self._find_weekday_match(combined_text)
 
     if rel_match:
         rel = rel_match.group("rel").lower()
@@ -317,8 +346,9 @@ class TemporalAnalyzer(BaseAnalyzer):
         }[rel]
         target_date = reference_date + timedelta(days=offset)
     elif weekday_match:
+        weekday_name, modifier = weekday_match
         target_date = self._resolve_weekday_date(
-            reference_date, weekday_match.group("weekday"), weekday_match.group("modifier")
+            reference_date, weekday_name, modifier
         )
 
     time_of_day = self._resolve_time_of_day(combined_text)
@@ -466,7 +496,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     # Deduplicate by overlap (expansion means spans from different
     # sources rarely share exact (start,end) anymore). Prefer the
     # spaCy entity record when spans overlap.
-    expanded.sort(key=lambda x: (x["start_char"], x["source"] != "spacy_entity"))
+    expanded.sort(key=lambda x: (x["start_char"], -(x["end_char"] - x["start_char"]), x["source"] != "spacy_entity"))
 
     unique = []
     for item in expanded:
@@ -524,8 +554,6 @@ class TemporalAnalyzer(BaseAnalyzer):
     fallback_matches = []
 
     for candidate in activity_candidates:
-
-        # This fallback is specifically for activity nouns.
         if candidate.pos_ not in {"NOUN", "PROPN"}:
             continue
 
@@ -552,12 +580,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             if candidate.head.i != shared_ancestor.i:
                 continue
 
-            fallback_matches.append(
-                (
-                    candidate,
-                    temporal_distance + candidate_distance
-                )
-            )
+            fallback_matches.append((candidate, temporal_distance + candidate_distance))
 
     # Deduplicate candidates in case more than one shared ancestor
     # produced a match.
@@ -565,7 +588,6 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     for candidate, distance in fallback_matches:
         existing = unique_matches.get(candidate.i)
-
         if existing is None or distance < existing[1]:
             unique_matches[candidate.i] = (candidate, distance)
 
@@ -599,9 +621,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     # the dependency path from its token(s).
     for span in temporal_spans:
         span_tokens = self.tokens_overlapping_span(
-            doc,
-            span["start_char"],
-            span["end_char"],
+            doc, span["start_char"], span["end_char"],
         )
         associated_activity = None
         # A span may contain multiple tokens, such as "9pm tomorrow".
@@ -609,8 +629,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         # activity found.
         for span_token in span_tokens:
             associated_activity = self.find_activity_from_dependency(
-                span_token,
-                activities,
+                span_token, activities,
             )
 
             if associated_activity is not None:
@@ -627,7 +646,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         if associated_activity is None:
             expression_result["association"] = "unresolved"
             expression_result["activity_token"] = None
-            print(
+            print( 
                 f"UNRESOLVED temporal expression: "
                 f"{span['text']!r}"
             )
