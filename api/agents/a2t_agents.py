@@ -328,6 +328,7 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
  
     user_payload = {
       "user_speech_transcript": text_to_analyze,
+      "linguistic_blueprint": linguistic_blueprint,
       "extracted_json": json_to_analyze
     }
  
