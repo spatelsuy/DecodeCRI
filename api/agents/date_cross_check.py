@@ -32,8 +32,14 @@ def check_item_dates(categorization_json, linguistic_blueprint):
     LLM to silently "fix" it (which is what produced the bad guess).
     """
     print("Linguistic BluePrint in check_item_dates =")
+    print(type(linguistic_blueprint))          # confirms it's actually a dict, not a string
     print(linguistic_blueprint)
-    print(linguistic_blueprint.get("evidence", {}))
+
+    if isinstance(linguistic_blueprint, dict):
+        print("evidence =", linguistic_blueprint.get("evidence", {}))
+    else:
+        print("linguistic_blueprint is NOT a dict — likely still a JSON string or something else")
+    
     known_dates = _all_resolved_dates(linguistic_blueprint)
     warnings = []
 
