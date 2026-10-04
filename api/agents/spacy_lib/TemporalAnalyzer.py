@@ -280,6 +280,7 @@ class TemporalAnalyzer(BaseAnalyzer):
   def _resolve_time_of_day(self, text):
     print("888")
     match = CLOCK_TIME_RE.search(text)
+    print("888-1")
     if match:
         hour = int(match.group("hour"))
         minute = int(match.group("minute") or 0)
@@ -294,6 +295,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     if match:
         return PERIOD_DEFAULTS[match.group(1).lower()]
 
+    print("8888")
     return None
 
 
@@ -334,7 +336,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     hour, minute = time_of_day if time_of_day else (0, 0)
 
     resolved_dt = datetime.combine(target_date, time(hour, minute), tzinfo=ZoneInfo(DEFAULT_TIMEZONE))
-
+    print("888-2")
     return resolved_dt.isoformat(), is_recurring, "explicit"
 
 
