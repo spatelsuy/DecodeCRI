@@ -431,8 +431,8 @@ class TemporalAnalyzer(BaseAnalyzer):
 
   
   def find_temporal_spans(self, doc):
+    print("11")
     found = []
-
     for ent in doc.ents:
         if ent.label_ in {"DATE", "TIME"}:
             found.append({
@@ -458,7 +458,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     expanded = []
     for item in found:
-        result = expand_span_by_dependency(doc, item["start_char"], item["end_char"])
+        result = self.expand_span_by_dependency(doc, item["start_char"], item["end_char"])
         if result is None:
             expanded.append(item)
             continue
@@ -482,6 +482,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     #print("temporal span")
     #print(unique)
+    print("12")
     return sorted(unique, key=lambda x: x["start_char"])
 
 
