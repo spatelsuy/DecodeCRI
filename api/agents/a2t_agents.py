@@ -245,14 +245,20 @@ def validate_and_ground_times(
     # Standardize input dictionary parameter
     data = extracted_json or {}
     if not data or not blueprint_temporal_entities:
+        print("DATA is empty")
         return data
 
+    print("Data is")
+    print(data)
+    print("Blue Print")
+    print(blueprint_temporal_entities)
     # Extract valid dates and exact timestamps from blueprint
     blueprint_timestamps = set()
     blueprint_dates = set()
 
     for entity in blueprint_temporal_entities:
         dt_str = entity.get("resolved_datetime")
+        print(dt_str)
         if dt_str:
             blueprint_timestamps.add(dt_str)
             base_date = dt_str.split("T")[0]
