@@ -58,7 +58,11 @@ def check_item_dates(categorization_json, linguistic_blueprint):
             # Non-null, non-recurring "time" should trace back to
             # something the blueprint actually found in the transcript.
             if time_val is not None and not is_recurring:
+                print("TIME VAL = ")
+                print(time_val)
                 if time_val not in known_dates:
+                    print("KNOWN DATES")
+                    print(known_dates)
                     warnings.append({
                         "category": category,
                         "index": index,
