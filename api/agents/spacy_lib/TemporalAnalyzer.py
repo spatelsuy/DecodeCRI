@@ -340,6 +340,10 @@ class TemporalAnalyzer(BaseAnalyzer):
     hour, minute = time_of_day if time_of_day else (0, 0)
     print("888-6")
     print("TIMEZONE", self.timezone_name)
+    print(target_date)
+    print(hour)
+    print(minute)
+    print("888-7")
     resolved_dt = datetime.combine(target_date, time(hour, minute), tzinfo=ZoneInfo(self.timezone_name))
     print("888-2")
     return resolved_dt.isoformat(), is_recurring, "explicit"
