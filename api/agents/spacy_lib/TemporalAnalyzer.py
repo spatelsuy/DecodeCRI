@@ -490,7 +490,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     if not activity_candidates:
         return None
 
-    ancestor_path = ancestor_chain(token)
+    ancestor_path = self.ancestor_chain(token)
     candidate_ids = {c.i for c in activity_candidates}
 
     # ------------------------------------------------------
@@ -509,7 +509,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     # ------------------------------------------------------
     for ancestor in ancestor_path:
         extended = [
-            (candidate, depth) for candidate, depth in deeper_action_candidates(ancestor)
+            (candidate, depth) for candidate, depth in self.deeper_action_candidates(ancestor)
             if candidate.i in candidate_ids
         ]
         if extended:
@@ -522,7 +522,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     # ------------------------------------------------------
     # Pass 2: Shared governing verb fallback
     # ------------------------------------------------------
-    temporal_ancestors = get_ancestor_distances(token)
+    temporal_ancestors = self.get_ancestor_distances(token)
 
     fallback_matches = []
 
@@ -532,7 +532,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         if candidate.pos_ not in {"NOUN", "PROPN"}:
             continue
 
-        candidate_ancestors = get_ancestor_distances(candidate)
+        candidate_ancestors = self.get_ancestor_distances(candidate)
 
         # Find shared ancestors between the temporal token and
         # the candidate activity noun.
@@ -612,7 +612,6 @@ class TemporalAnalyzer(BaseAnalyzer):
             span["end_char"],
         )
         associated_activity = None
-
         # A span may contain multiple tokens, such as "9pm tomorrow".
         # Check each token and take the first dependency-supported
         # activity found.
