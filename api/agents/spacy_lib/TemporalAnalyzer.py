@@ -317,11 +317,11 @@ class TemporalAnalyzer(BaseAnalyzer):
         }[rel]
         target_date = reference_date + timedelta(days=offset)
     elif weekday_match:
-        target_date = _resolve_weekday_date(
+        target_date = self._resolve_weekday_date(
             reference_date, weekday_match.group("weekday"), weekday_match.group("modifier")
         )
 
-    time_of_day = _resolve_time_of_day(combined_text)
+    time_of_day = self._resolve_time_of_day(combined_text)
 
     if target_date is None and time_of_day is None:
         return None, is_recurring, "unresolved"
@@ -335,9 +335,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     return resolved_dt.isoformat(), is_recurring, "explicit"
 
-  
 
-  
   def debug_temporal_paths(self, doc, temporal_spans):
     for span in temporal_spans:
         #print(f"\nTemporal span: {span['text']!r}")
@@ -669,6 +667,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     return output
 
   def build_temporal_entities(self, temporal_activities, reference_dt=None):
+    print("8")
     if reference_dt is None:
         reference_dt = datetime.now(ZoneInfo(DEFAULT_TIMEZONE))
 
@@ -692,7 +691,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             # drop this key if you only want the fields shown above.
             "activity": item["activity"],
         })
-
+    print("9")
     return {"temporal_entities": temporal_entities}
   
 
