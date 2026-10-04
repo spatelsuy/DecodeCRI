@@ -30,16 +30,7 @@ def check_item_dates(categorization_json, linguistic_blueprint):
     Does not mutate categorization_json -- flags only, for a human or
     a targeted follow-up LLM call to review, rather than trusting an
     LLM to silently "fix" it (which is what produced the bad guess).
-    """
-    print("Linguistic BluePrint in check_item_dates =")
-    print(type(linguistic_blueprint))          # confirms it's actually a dict, not a string
-    print(linguistic_blueprint)
-
-    if isinstance(linguistic_blueprint, dict):
-        print("evidence =", linguistic_blueprint.get("evidence", {}))
-    else:
-        print("linguistic_blueprint is NOT a dict — likely still a JSON string or something else")
-    
+    """    
     known_dates = _all_resolved_dates(linguistic_blueprint)
     warnings = []
 
@@ -67,11 +58,7 @@ def check_item_dates(categorization_json, linguistic_blueprint):
             # Non-null, non-recurring "time" should trace back to
             # something the blueprint actually found in the transcript.
             if time_val is not None and not is_recurring:
-                print("TIME VAL = ")
-                print(time_val)
                 if time_val not in known_dates:
-                    print("KNOWN DATES")
-                    print(known_dates)
                     warnings.append({
                         "category": category,
                         "index": index,
