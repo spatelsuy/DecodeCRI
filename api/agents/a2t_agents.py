@@ -241,7 +241,7 @@ def validate_and_ground_times(
     Ensures extracted event/task timestamps strictly match valid timestamps 
     generated in Stage 1, while tolerating end-of-day offsets and LLM timezone corrections.
     """
-    blueprint_temporal_entities = blueprint
+    blueprint_temporal_entities = blueprint.get("temporal_entities")
     # Standardize input dictionary parameter
     data = extracted_json or {}
     if not data or not blueprint_temporal_entities:
@@ -257,6 +257,7 @@ def validate_and_ground_times(
     blueprint_dates = set()
 
     for entity in blueprint_temporal_entities:
+        print(entity)
         dt_str = entity.get("resolved_datetime")
         print(dt_str)
         if dt_str:
@@ -271,7 +272,7 @@ def validate_and_ground_times(
                 blueprint_dates.add((dt_obj + timedelta(days=1)).strftime("%Y-%m-%d"))
             except ValueError:
                 pass
-
+    print("Blueprint analyzed")
     # Sort entities by phrase length descending to prioritize longer phrases ("8:30 pm" over "8 pm")
     sorted_entities = sorted(
         [e for e in blueprint_temporal_entities if e.get("resolved_datetime")],
