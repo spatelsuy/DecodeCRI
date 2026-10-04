@@ -289,10 +289,12 @@ class TemporalAnalyzer(BaseAnalyzer):
             hour += 12
         if meridiem == "am" and hour == 12:
             hour = 0
+        print("888-3")
         return hour, minute
 
     match = PERIOD_RE.search(text)
     if match:
+        print("888-4")
         return PERIOD_DEFAULTS[match.group(1).lower()]
 
     print("8888")
@@ -335,7 +337,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     hour, minute = time_of_day if time_of_day else (0, 0)
 
-    resolved_dt = datetime.combine(target_date, time(hour, minute), tzinfo=ZoneInfo(DEFAULT_TIMEZONE))
+    resolved_dt = datetime.combine(target_date, time(hour, minute), tzinfo=ZoneInfo(self.timezone_name))
     print("888-2")
     return resolved_dt.isoformat(), is_recurring, "explicit"
 
@@ -673,7 +675,7 @@ class TemporalAnalyzer(BaseAnalyzer):
   def build_temporal_entities(self, temporal_activities, reference_dt=None):
     print("8")
     if reference_dt is None:
-        reference_dt = datetime.now(ZoneInfo(DEFAULT_TIMEZONE))
+        reference_dt = datetime.now(ZoneInfo(self.timezone_name))
 
     temporal_entities = []
 
