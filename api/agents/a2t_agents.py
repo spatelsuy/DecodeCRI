@@ -249,18 +249,12 @@ def validate_and_ground_times(
         print("DATA is empty")
         return data
 
-    print("Data is")
-    print(data)
-    print("Blue Print")
-    print(blueprint_temporal_entities)
     # Extract valid dates and exact timestamps from blueprint
     blueprint_timestamps = set()
     blueprint_dates = set()
 
     for entity in blueprint_temporal_entities:
-        print(entity)
         dt_str = entity.get("resolved_datetime")
-        print(dt_str)
         if dt_str:
             blueprint_timestamps.add(dt_str)
             base_date = dt_str.split("T")[0]
@@ -273,7 +267,6 @@ def validate_and_ground_times(
                 blueprint_dates.add((dt_obj + timedelta(days=1)).strftime("%Y-%m-%d"))
             except ValueError:
                 pass
-    print("Blueprint analyzed")
     # Sort entities by phrase length descending to prioritize longer phrases ("8:30 pm" over "8 pm")
     sorted_entities = sorted(
         [e for e in blueprint_temporal_entities if e.get("resolved_datetime")],
