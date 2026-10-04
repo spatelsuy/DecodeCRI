@@ -596,7 +596,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     results = {}
     for activity in activities:
         results[activity.i] = {
-            "activity": activity_label(activity),
+            "activity": self.activity_label(activity),
             "activity_token": activity.text,
             "activity_token_index": activity.i,
             "temporal_expressions": [],
