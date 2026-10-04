@@ -175,79 +175,6 @@ Output ONLY the finalized, repaired, and structurally valid JSON object matching
 Do not include markdown formatting, backticks, or any conversational text.
 
 """
-# ========================================================
-# NEW: RUN SPACY LOCAL DEPENDENCY PARSING BEFORE API CALL
-# ========================================================
-def get_linguistic_blueprint(text_to_analyze: str) -> Dict[str, Any]:
-    """
-    Parses unpunctuated voice transcripts locally using spaCy dependency trees 
-    to extract structural hooks for verbs, objects, time context, and negation.
-    """
-    try:
-        nlp = spacy.load("en_core_web_sm")
-        doc = nlp(text_to_analyze)
-        detected_actions = []
-        
-        for token in doc:
-            if token.pos_ in ["VERB", "AUX"] or token.dep_ == "ROOT":
-                verb_text = token.text
-                obj_text = None
-                time_markers = []
-                
-                # 1. Extract Objects (Direct or Prepositional Destinations)
-                dobj_tokens = [c for c in token.children if c.dep_ == "dobj"]
-                if dobj_tokens:
-                    obj_text = "".join([t.text_with_ws for t in dobj_tokens[0].subtree]).strip()
-                else:
-                    prep_tokens = [c for c in token.children if c.dep_ == "prep"]
-                    if prep_tokens:
-                        obj_text = f"{token.text} " + "".join([t.text_with_ws for t in prep_tokens[0].subtree]).strip()
-                
-                # 2. Handle nested clauses (e.g., "Remind me to put...")
-                xcomp_tokens = [c for c in token.children if c.dep_ == "xcomp"]
-                if xcomp_tokens:
-                    nested_verb = xcomp_tokens[0]
-                    nested_dobj = [c for c in nested_verb.children if c.dep_ in ["dobj", "pobj", "advmod"]]
-                    if nested_dobj:
-                        verb_text = nested_verb.text
-                        obj_text = "".join([t.text_with_ws for t in nested_verb.subtree]).strip()
-
-                # 3. Extract Related Times / Anchors
-                for sub_token in doc:
-                    if sub_token.ent_type_ in ["TIME", "DATE"] or sub_token.dep_ == "npadvmod" or sub_token.text.lower() in ["tonight", "morning", "evening"]:
-                        ancestors = [a.text for a in sub_token.ancestors]
-                        if verb_text in ancestors or (obj_text and any(w in obj_text for w in ancestors)):
-                            if sub_token.text not in time_markers:
-                                time_markers.append(sub_token.text)
-                
-                # 4. Finalize & Sanitize Entry
-                if obj_text:
-                    for tm in time_markers:
-                        obj_text = obj_text.replace(tm, "").strip(", ")
-                    
-                    # Capture negation flags (e.g., "not", "never")
-                    is_negated = any(child.dep_ == "neg" for child in token.children) or \
-                                 any(child.dep_ == "neg" for child in token.head.children)
-
-                    action_entry = {
-                        "verb": verb_text,
-                        "object": obj_text,
-                        "time_context": " ".join(time_markers) if time_markers else None,
-                        "is_negated": is_negated
-                    }
-                    
-                    # Prevent duplicates and filter out weak direct objects like "me"
-                    if action_entry not in detected_actions and obj_text.lower() != "me":
-                        detected_actions.append(action_entry)
-                        
-        return {"detected_actions": detected_actions}
-
-    except Exception as spacy_err:
-        print(f"Warning: spaCy fallback triggered due to error: {spacy_err}")
-        return {"detected_actions": []}
-        
-
-################################################################################################
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
     print(f"--- Node 1: Transcribing via Raw Requests for {state['user_name']} ---")
@@ -424,6 +351,8 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
       date_warnings = check_item_dates(analysis_result, linguistic_blueprint)
       if date_warnings:
           print("DATE VALIDATION WARNINGS:", date_warnings)
+      else:
+          print("NO DATE VALIDATION WARNINGS")
       
       grounded_analysis_result = validate_and_ground_times(
           extracted_json=analysis_result,
