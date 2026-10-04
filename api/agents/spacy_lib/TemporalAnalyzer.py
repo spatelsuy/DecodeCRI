@@ -452,7 +452,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         connected_to_verb = False
 
         while ancestor != token:
-            if ancestor.pos_ == "VERB":
+            if ancestor.pos_ in {"VERB", "AUX"}:
                 connected_to_verb = True
                 break
             if ancestor.head == ancestor:
@@ -594,7 +594,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             _, candidate_distance = candidate_ancestors[ancestor_id]
 
             # Require a verb to act as the shared governing point.
-            if shared_ancestor.pos_ != "VERB":
+            if shared_ancestor.pos_ not in {"VERB", "AUX"}:
                 continue
 
             # Prefer the straightforward case where the activity noun
