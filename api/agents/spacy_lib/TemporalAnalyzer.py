@@ -199,14 +199,14 @@ class TemporalAnalyzer(BaseAnalyzer):
         if child.dep_ == "xcomp" and child.pos_ == "VERB":
             visited.add(child.i)
             results.append((child, depth))
-            results.extend(deeper_action_candidates(child, depth + 1, visited))
+            results.extend(self.deeper_action_candidates(child, depth + 1, visited))
 
         elif child.dep_ == "prep" and child.lemma_.lower() in PCOMP_ACTIVITY_PREPS:
             for grandchild in child.children:
                 if grandchild.dep_ == "pcomp" and grandchild.pos_ == "VERB" and grandchild.i not in visited:
                     visited.add(grandchild.i)
                     results.append((grandchild, depth))
-                    results.extend(deeper_action_candidates(grandchild, depth + 1, visited))
+                    results.extend(self.deeper_action_candidates(grandchild, depth + 1, visited))
 
     return results
 
@@ -584,9 +584,10 @@ class TemporalAnalyzer(BaseAnalyzer):
   
   
   def extract_temporal_activities(self, doc, text):
-    temporal_spans = find_temporal_spans(doc)
-    activities = find_activity_candidates(doc)
-    debug_temporal_paths(doc, temporal_spans)
+    print("1")
+    temporal_spans = self.find_temporal_spans(doc)
+    activities = self.find_activity_candidates(doc)
+    self.debug_temporal_paths(doc, temporal_spans)
 
     # One result bucket per activity token.
     results = {}
@@ -601,7 +602,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     # Associate each temporal expression with an activity using
     # the dependency path from its token(s).
     for span in temporal_spans:
-        span_tokens = tokens_overlapping_span(
+        span_tokens = self.tokens_overlapping_span(
             doc,
             span["start_char"],
             span["end_char"],
@@ -612,7 +613,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         # Check each token and take the first dependency-supported
         # activity found.
         for span_token in span_tokens:
-            associated_activity = find_activity_from_dependency(
+            associated_activity = self.find_activity_from_dependency(
                 span_token,
                 activities,
             )
@@ -661,6 +662,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             )
             output.append(item)
 
+    print("2")
     return output
 
   def build_temporal_entities(self, temporal_activities, reference_dt=None):
@@ -674,7 +676,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             expr["text"] for expr in item["temporal_expressions"]
         )
 
-        resolved_datetime, is_recurring, date_source = resolve_combined_temporal(
+        resolved_datetime, is_recurring, date_source = self.resolve_combined_temporal(
             combined_text, reference_dt
         )
 
@@ -691,11 +693,9 @@ class TemporalAnalyzer(BaseAnalyzer):
     return {"temporal_entities": temporal_entities}
   
 
-
-  
   def analyze(self, doc, raw_text):
     temporal_entities = []
-    temporal_activities = extract_temporal_activities(doc, raw_text)
-    final_output = build_temporal_entities(temporal_activities)
+    temporal_activities = self.extract_temporal_activities(doc, raw_text)
+    final_output = self.build_temporal_entities(temporal_activities)
     return final_output
     
