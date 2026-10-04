@@ -31,6 +31,9 @@ def check_item_dates(categorization_json, linguistic_blueprint):
     a targeted follow-up LLM call to review, rather than trusting an
     LLM to silently "fix" it (which is what produced the bad guess).
     """
+    print("Linguistic BluePrint in check_item_dates =")
+    print(linguistic_blueprint)
+    print(linguistic_blueprint.get("evidence", {}))
     known_dates = _all_resolved_dates(linguistic_blueprint)
     warnings = []
 
