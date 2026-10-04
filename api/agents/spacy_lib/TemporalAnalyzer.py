@@ -130,7 +130,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     else:
       self.base_date = cmn_ensure_timezone(base_date, timezone_name)
 
-  def expand_span_by_dependency(doc, start_char, end_char):
+  def expand_span_by_dependency(self, doc, start_char, end_char):
     span_tokens = [
         t for t in doc
         if t.idx < end_char and t.idx + len(t.text) > start_char
@@ -152,7 +152,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     new_end = all_tokens[-1].idx + len(all_tokens[-1].text)
     return text, new_start, new_end
 
-  def tokens_overlapping_span(doc, start_char, end_char):
+  def tokens_overlapping_span(self, doc, start_char, end_char):
     """Return tokens that overlap a character span."""
     return [
         token for token in doc
@@ -160,7 +160,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         and token.idx + len(token) > start_char
     ]
 
-  def dependency_path(token):
+  def dependency_path(self, token):
     """Return token -> parent -> ... -> root."""
     path = [token]
     current = token
@@ -171,7 +171,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     return path
 
-  def ancestor_chain(token):
+  def ancestor_chain(self, token):
     """Plain bottom-up ancestor path: token -> head -> head -> ... -> ROOT."""
     path = []
     current = token
@@ -187,7 +187,7 @@ class TemporalAnalyzer(BaseAnalyzer):
         current = current.head
     return path
 
-  def deeper_action_candidates(verb_token, depth=1, visited=None):
+  def deeper_action_candidates(self, verb_token, depth=1, visited=None):
     if visited is None:
         visited = set()
 
@@ -210,7 +210,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     return results
 
-  def activity_label(activity):
+  def activity_label(self, activity):
     """
     Build a basic label from the activity verb and its direct
     object, when available.
@@ -234,7 +234,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     return activity.text
 
 
-  def get_ancestor_distances(token):
+  def get_ancestor_distances(self, token):
     """
     Return a dictionary mapping each ancestor token to its distance
     from the supplied token.
@@ -257,7 +257,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     return distances
   
 
-  def _resolve_weekday_date(reference_date, weekday_name, modifier):
+  def _resolve_weekday_date(self, reference_date, weekday_name, modifier):
     target_idx = WEEKDAY_INDEX[weekday_name.lower()]
     today_idx = reference_date.weekday()
     diff = (target_idx - today_idx) % 7
@@ -277,7 +277,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     # Plain weekday, or this/coming/upcoming/following.
     return reference_date + timedelta(days=diff)
   
-  def _resolve_time_of_day(text):
+  def _resolve_time_of_day(self, text):
     match = CLOCK_TIME_RE.search(text)
     if match:
         hour = int(match.group("hour"))
@@ -296,7 +296,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     return None
 
 
-  def resolve_combined_temporal(combined_text, reference_dt):
+  def resolve_combined_temporal(self, combined_text, reference_dt):
     lowered = combined_text.lower()
     reference_date = reference_dt.date()
 
@@ -338,7 +338,7 @@ class TemporalAnalyzer(BaseAnalyzer):
   
 
   
-  def debug_temporal_paths(doc, temporal_spans):
+  def debug_temporal_paths(self, doc, temporal_spans):
     for span in temporal_spans:
         #print(f"\nTemporal span: {span['text']!r}")
         start = span["start_char"]
@@ -365,7 +365,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             #print(f"  Token: {token.text!r}")
             #print("  Ancestor path:", " -> ".join(path))
   
-  def find_activity_candidates(doc):
+  def find_activity_candidates(self, doc):
     candidates = []
     candidate_ids = set()
 
@@ -430,7 +430,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
 
   
-  def find_temporal_spans(doc):
+  def find_temporal_spans(self, doc):
     found = []
 
     for ent in doc.ents:
@@ -485,7 +485,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     return sorted(unique, key=lambda x: x["start_char"])
 
 
-  def find_activity_from_dependency(token, activity_candidates):
+  def find_activity_from_dependency(self, token, activity_candidates):
     if not activity_candidates:
         return None
 
@@ -583,7 +583,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
   
   
-  def extract_temporal_activities(doc, text):
+  def extract_temporal_activities(self, doc, text):
     temporal_spans = find_temporal_spans(doc)
     activities = find_activity_candidates(doc)
     debug_temporal_paths(doc, temporal_spans)
@@ -663,7 +663,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     return output
 
-  def build_temporal_entities(temporal_activities, reference_dt=None):
+  def build_temporal_entities(self, temporal_activities, reference_dt=None):
     if reference_dt is None:
         reference_dt = datetime.now(ZoneInfo(DEFAULT_TIMEZONE))
 
