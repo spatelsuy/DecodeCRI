@@ -177,7 +177,7 @@ Do not include markdown formatting, backticks, or any conversational text.
 """
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
-    print(f"--- Node 1: Transcribing via Raw Requests for {state['user_name']} ---")
+    print(f"--- TRANSCRIBE AUDIO TO TEXT for {state['user_name']} ---")
     
     try:
         # Call the new direct request function
@@ -194,7 +194,6 @@ def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
 
 
 def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
- 
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
@@ -217,7 +216,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         user_payload=user_payload,
         model="openai/gpt-oss-120b"
       )
-      print("\n===============categorization_json============\n", analysis_result)
+      print("===============categorization_json (PROMPT 1) ============\n", analysis_result)
  
       # CHANGED: also persist linguistic_blueprint in state so
       # categorize_validation can read it back later -- it needs the
@@ -305,21 +304,23 @@ def validate_and_ground_times(
 
 def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     """Node 2: Validate the extracted JSON."""
-    print("--- Node 2: Validate extraction")
+    #print("--- Node 2: Validate extraction")
     DEFAULT_TIMEZONE = "UTC"
     user_tz = state.get("user_timezone") or DEFAULT_TIMEZONE
  
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
+      print("NO VALID USER INPUT TEXT TO VALIDATE USING PROMPT 2")
       return {"categorization_json": {"error": "No valid text to validate"}}
  
     json_to_analyze = state.get("categorization_json", "")
-    print("json_to_analyze=======\n", json_to_analyze)
+    #print("json_to_analyze=======\n", json_to_analyze)
  
     # CHANGED: json_to_analyze is a dict, so `in` was checking dict
     # KEYS, not error text -- this never actually caught a failure.
     # Use .get("error") instead.
     if not json_to_analyze or json_to_analyze.get("error"):
+      print("NO VALID PROMPT 1 RESPONSE TO VALIDATE USING PROMPT 2")
       return {"categorization_json": {"error": "No valid text to validate"}}
  
     # NEW: read back the blueprint saved by categorize_text
@@ -343,6 +344,7 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
         user_payload=user_payload,
         model="openai/gpt-oss-120b"
       )
+      print("===============validated_json (PROMPT 2) ============\n", analysis_result)
       print_json_diff(json_to_analyze, analysis_result)
  
       # NEW: deterministic check on the audit pass's OWN output --
