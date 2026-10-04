@@ -278,6 +278,7 @@ class TemporalAnalyzer(BaseAnalyzer):
     return reference_date + timedelta(days=diff)
   
   def _resolve_time_of_day(self, text):
+    print("888")
     match = CLOCK_TIME_RE.search(text)
     if match:
         hour = int(match.group("hour"))
@@ -297,6 +298,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
 
   def resolve_combined_temporal(self, combined_text, reference_dt):
+    print("88")
     lowered = combined_text.lower()
     reference_date = reference_dt.date()
 
