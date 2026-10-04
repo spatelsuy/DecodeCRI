@@ -328,15 +328,18 @@ class TemporalAnalyzer(BaseAnalyzer):
         )
 
     time_of_day = self._resolve_time_of_day(combined_text)
+    print("888-4")
 
     if target_date is None and time_of_day is None:
+        print("888-5")
         return None, is_recurring, "unresolved"
 
     if target_date is None:
         target_date = reference_date
 
     hour, minute = time_of_day if time_of_day else (0, 0)
-
+    print("888-6")
+    print("TIMEZONE", self.timezone_name)
     resolved_dt = datetime.combine(target_date, time(hour, minute), tzinfo=ZoneInfo(self.timezone_name))
     print("888-2")
     return resolved_dt.isoformat(), is_recurring, "explicit"
