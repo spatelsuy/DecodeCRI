@@ -3,7 +3,7 @@ import os
 
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, date, time, timedelta
 from zoneinfo import ZoneInfo
 import spacy
 import dateparser
@@ -344,7 +344,10 @@ class TemporalAnalyzer(BaseAnalyzer):
     print(hour)
     print(minute)
     print("888-7")
-    resolved_dt = datetime.combine(target_date, time(hour, minute), tzinfo=ZoneInfo(self.timezone_name))
+    try:
+        resolved_dt = datetime.combine(target_date, time(hour, minute), tzinfo=ZoneInfo(self.timezone_name))
+    except Exception as e:
+        print(f"Unexpected error: {e}")
     print("888-2")
     return resolved_dt.isoformat(), is_recurring, "explicit"
 
