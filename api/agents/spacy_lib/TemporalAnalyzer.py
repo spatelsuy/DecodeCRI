@@ -94,6 +94,7 @@ WEEKDAY_INDEX = {
     "friday": 4, "saturday": 5, "sunday": 6,
 }
 SKIP_MODIFIERS = {"next"}
+FORWARD_SKIP_IF_TODAY = {"coming", "upcoming", "following"}
 PAST_MODIFIERS = {"last", "previous"}
 RECURRING_MARKERS = {
     "every", "each", "alternate", "monthly", "weekly", "daily",
@@ -301,6 +302,9 @@ class TemporalAnalyzer(BaseAnalyzer):
             diff = 7
         return reference_date + timedelta(days=diff + 7)
 
+    if modifier in FORWARD_SKIP_IF_TODAY and diff == 0:
+        diff = 7      
+    
     # Plain weekday, or this/coming/upcoming/following.
     return reference_date + timedelta(days=diff)
 
