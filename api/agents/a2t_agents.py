@@ -207,7 +207,8 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     }
  
     try:
-      today_date = datetime.today().strftime('%Y-%m-%d')
+      #today_date = datetime.today().strftime('%Y-%m-%d')
+      today_date = datetime.now(ZoneInfo(user_tz)).strftime('%Y-%m-%d')
       client_time = state["client_time"]
       final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', client_time)
       final_prompt = final_prompt.replace('{{USER_TIMEZONE}}', user_tz)
@@ -334,7 +335,8 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     }
  
     try:
-      today_date = datetime.today().strftime('%Y-%m-%d')
+      #today_date = datetime.today().strftime('%Y-%m-%d')
+      today_date = datetime.now(ZoneInfo(user_tz)).strftime('%Y-%m-%d')
       client_time = state["client_time"]
       dt_obj = datetime.strptime(client_time, '%Y-%m-%d')
       day_of_week = dt_obj.strftime('%A')
