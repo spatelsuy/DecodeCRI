@@ -101,6 +101,49 @@ RECURRING_MARKERS = {
     "annually", "yearly",
 }
 
+# ---- Recurrence (frequency) vocabulary -------------------------------
+# Words like "monthly" / "every other week" say HOW OFTEN something
+# happens. They are not dates and must not be resolved as dates; they are
+# turned into recurrence metadata on the activity instead.
+FREQUENCY_WORDS = {
+    "daily": ("daily", 1), "weekly": ("weekly", 1), "monthly": ("monthly", 1),
+    "quarterly": ("quarterly", 1), "yearly": ("yearly", 1), "annually": ("yearly", 1),
+    "biweekly": ("weekly", 2), "fortnightly": ("weekly", 2),
+}
+UNIT_TO_FREQUENCY = {
+    "day": "daily", "week": "weekly", "month": "monthly",
+    "quarter": "quarterly", "year": "yearly",
+}
+ 
+# A span consisting ONLY of a frequency marker (no date/time content).
+FREQUENCY_ONLY_RE = re.compile(
+    r"^\s*(?:"
+    r"(?:daily|weekly|monthly|quarterly|yearly|annually|biweekly|fortnightly)"
+    r"|(?:every|each)\s+(?:(?:other|alternate|second)\s+)?(?:day|week|month|quarter|year)"
+    r")\s*$",
+    re.IGNORECASE,
+)
+EVERY_OTHER_RE = re.compile(
+    rf"\bevery\s+(?:other|alternate|second)\s+(?P<unit>day|week|month|year|{WEEKDAYS})\b", re.IGNORECASE
+)
+EVERY_UNIT_RE = re.compile(
+    r"\b(?:every|each)\s+(?P<unit>day|week|month|quarter|year)\b", re.IGNORECASE
+)
+EVERY_WEEKDAY_RE = re.compile(
+    rf"\b(?:every|each)\s+(?P<weekday>{WEEKDAYS})\b", re.IGNORECASE
+)
+FREQUENCY_WORD_RE = re.compile(
+    r"\b(?P<word>daily|weekly|monthly|quarterly|yearly|annually|biweekly|fortnightly)\b", re.IGNORECASE
+)
+ 
+# Regex source for frequency phrases, so recurrence detection does not depend
+# on spaCy's NER happening to tag them ("every other week" is not tagged).
+RECURRENCE_REGEX = re.compile(
+    r"\b(?:daily|weekly|monthly|quarterly|yearly|annually|biweekly|fortnightly)\b"
+    r"|\b(?:every|each)\s+(?:(?:other|alternate|second)\s+)?(?:day|week|month|quarter|year)\b",
+    re.IGNORECASE,
+)
+
 PERIOD_DEFAULTS = {
     "morning": (9, 0),
     "noon": (12, 0),
@@ -175,9 +218,10 @@ class TemporalAnalyzer(BaseAnalyzer):
     ]
 
     all_tokens = sorted(set(span_tokens + extra), key=lambda t: t.i)
-    text = " ".join(t.text for t in all_tokens)
+    #text = " ".join(t.text for t in all_tokens)
     new_start = all_tokens[0].idx
     new_end = all_tokens[-1].idx + len(all_tokens[-1].text)
+    text = doc.text[new_start:new_end]
     return text, new_start, new_end
 
   def tokens_overlapping_span(self, doc, start_char, end_char):
@@ -508,6 +552,15 @@ class TemporalAnalyzer(BaseAnalyzer):
                 "label": label,
             })
 
+    for match in RECURRENCE_REGEX.finditer(doc.text):
+        found.append({
+            "text": match.group(),
+            "start_char": match.start(),
+            "end_char": match.end(),
+            "source": "regex",
+            "label": "RECURRENCE",
+        })
+
     expanded = []
     for item in found:
         result = self.expand_span_by_dependency(doc, item["start_char"], item["end_char"])
@@ -538,6 +591,11 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     #print("temporal span")
     #print(unique)
+    
+    for item in unique:
+        if FREQUENCY_ONLY_RE.match(item["text"]):
+            item["label"] = "RECURRENCE"
+
     return sorted(unique, key=lambda x: x["start_char"])
 
 
@@ -636,6 +694,14 @@ class TemporalAnalyzer(BaseAnalyzer):
   def extract_temporal_activities(self, doc, text):
     temporal_spans = self.find_temporal_spans(doc)
     activities = self.find_activity_candidates(doc)
+    activities = [
+        a for a in activities
+        if not any(
+            s["start_char"] <= a.idx and a.idx + len(a.text) <= s["end_char"]
+            for s in temporal_spans
+        )
+    ]
+    
     self.debug_temporal_paths(doc, temporal_spans)
     # One result bucket per activity token.
     results = {}
@@ -710,28 +776,37 @@ class TemporalAnalyzer(BaseAnalyzer):
   def build_temporal_entities(self, temporal_activities, reference_dt=None):
     if reference_dt is None:
         reference_dt = datetime.now(ZoneInfo(self.timezone_name))
-
+ 
     temporal_entities = []
-
+ 
     for item in temporal_activities:
-        combined_text = " ".join(
-            expr["text"] for expr in item["temporal_expressions"]
-        )
-
-        resolved_datetime, is_recurring, date_source = self.resolve_combined_temporal(
-            combined_text, reference_dt
-        )
-
+        exprs = item["temporal_expressions"]
+        date_exprs = [e for e in exprs if e["label"] != "RECURRENCE"]
+        recur_exprs = [e for e in exprs if e["label"] == "RECURRENCE"]
+ 
+        # Recurrence is read from ALL expressions (so "Every Thursday" and a
+        # standalone "monthly" are both seen), but only real date/time text
+        # is used to resolve a datetime.
+        recurrence = self.parse_recurrence(" ".join(e["text"] for e in exprs))
+ 
+        if date_exprs:
+            combined_text = " ".join(e["text"] for e in date_exprs)
+            resolved_datetime, is_recurring, date_source = self.resolve_combined_temporal(
+                combined_text, reference_dt
+            )
+        else:
+            # Frequency only ("a monthly review"): recurring, but no anchor date.
+            combined_text = " ".join(e["text"] for e in recur_exprs)
+            resolved_datetime, is_recurring, date_source = None, True, "recurrence_only"
+ 
         temporal_entities.append({
             "text": combined_text,
             "resolved_datetime": resolved_datetime,
-            "recurring": is_recurring,
+            "recurring": bool(is_recurring or recurrence),
+            "recurrence": recurrence,
             "date_source": date_source,
-            # Kept for traceability back to the activity this came from;
-            # drop this key if you only want the fields shown above.
             "activity": item["activity"],
         })
-    #return {"temporal_entities": temporal_entities}
     return temporal_entities
   
 
