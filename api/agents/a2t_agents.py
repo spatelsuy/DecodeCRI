@@ -258,7 +258,7 @@ def validate_and_ground_times(
     for entity in blueprint_temporal_entities:
         try:
            dt_str = entity.get("resolved_datetime")
-           print(dt_str)
+           print("date string = " + dt_str)
            if dt_str:
               blueprint_timestamps.add(dt_str)
               base_date = dt_str.split("T")[0]
