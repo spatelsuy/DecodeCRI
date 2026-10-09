@@ -6,20 +6,11 @@ import re
 from datetime import datetime, date, time, timedelta
 from zoneinfo import ZoneInfo
 import spacy
-import dateparser
 
 from Common import *
 from BaseAnalyzer import BaseAnalyzer
 
-# NOTE: the (?:...) grouping here is load-bearing. Without it, every
-# pattern that splices WEEKDAYS into a larger f-string pattern breaks:
-# `|` has lower precedence than concatenation, so e.g.
-# rf"\bnext\s+to\s+next\s+{WEEKDAYS}\b" without grouping compiles to
-# "\bnext\s+to\s+next\s+Monday|Tuesday|...|Sunday\b" -- seven independent
-# alternatives, where only "next to next Monday" actually requires the
-# prefix at all. This was previously masked because spaCy's own NER usually
-# tagged common phrasings correctly on its own, so the regex fallback's
-# brokenness rarely got exercised.
+# NOTE: the (?:...) grouping here is load-bearing (see earlier discussion).
 WEEKDAYS = (
     r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)"
 )
@@ -54,38 +45,13 @@ NON_ACTIVITY_VERBS = {
     "must", "need",
 }
 
-
-# Activity nouns that can represent an action, event, or scheduled activity.
-# Keep this list separate from dependency and traversal logic.
 EVENT_NOUNS = {
-    "meeting",
-    "appointment",
-    "interview",
-    "dinner",
-    "lunch",
-    "breakfast",
-    "call",
-    "presentation",
-    "discussion",
-    "conversation",
-    "class",
-    "lecture",
-    "training",
-    "conference",
-    "event",
-    "party",
-    "trip",
-    "flight",
-    "visit",
-    "reservation",
-    "consultation",
-    "session",
-    "demo",
-    "workshop",
-    "webinar",
-    "deadline",
-    "celebration",
-    "leave", "vacation", "holiday", "off",  # "on leave", "day off", etc.
+    "meeting", "appointment", "interview", "dinner", "lunch", "breakfast",
+    "call", "presentation", "discussion", "conversation", "class",
+    "lecture", "training", "conference", "event", "party", "trip",
+    "flight", "visit", "reservation", "consultation", "session", "demo",
+    "workshop", "webinar", "deadline", "celebration",
+    "leave", "vacation", "holiday", "off",
 }
 
 PCOMP_ACTIVITY_PREPS = {"for"}
@@ -114,7 +80,7 @@ UNIT_TO_FREQUENCY = {
     "day": "daily", "week": "weekly", "month": "monthly",
     "quarter": "quarterly", "year": "yearly",
 }
- 
+
 # A span consisting ONLY of a frequency marker (no date/time content).
 FREQUENCY_ONLY_RE = re.compile(
     r"^\s*(?:"
@@ -135,7 +101,7 @@ EVERY_WEEKDAY_RE = re.compile(
 FREQUENCY_WORD_RE = re.compile(
     r"\b(?P<word>daily|weekly|monthly|quarterly|yearly|annually|biweekly|fortnightly)\b", re.IGNORECASE
 )
- 
+
 # Regex source for frequency phrases, so recurrence detection does not depend
 # on spaCy's NER happening to tag them ("every other week" is not tagged).
 RECURRENCE_REGEX = re.compile(
@@ -145,14 +111,9 @@ RECURRENCE_REGEX = re.compile(
 )
 
 PERIOD_DEFAULTS = {
-    "morning": (9, 0),
-    "noon": (12, 0),
-    "midday": (12, 0),
-    "afternoon": (15, 0),
-    "evening": (18, 0),
-    "night": (20, 0),
-    "tonight": (20, 0),
-    "midnight": (0, 0),
+    "morning": (9, 0), "noon": (12, 0), "midday": (12, 0),
+    "afternoon": (15, 0), "evening": (18, 0), "night": (20, 0),
+    "tonight": (20, 0), "midnight": (0, 0),
 }
 
 WEEKDAY_RE = re.compile(
@@ -161,13 +122,6 @@ WEEKDAY_RE = re.compile(
     re.IGNORECASE,
 )
 
-# "Skip two occurrences" idioms. Must be checked BEFORE WEEKDAY_RE:
-# - "next to next Tuesday" matches WEEKDAY_RE on just its second
-#   "next Tuesday" substring, silently dropping "next to" and giving a
-#   date one week too early.
-# - "Tuesday after next" matches WEEKDAY_RE with modifier=None (the
-#   modifier group only looks BEFORE the weekday), so it's misread as a
-#   bare weekday (nearest occurrence) instead of two weeks out.
 DOUBLE_NEXT_RE = re.compile(
     rf"\bnext\s+to\s+next\s+(?P<weekday>{WEEKDAYS})\b", re.IGNORECASE
 )
@@ -184,7 +138,6 @@ CLOCK_TIME_RE = re.compile(
     r"\b(?P<hour>1[0-2]|0?[1-9])(?::(?P<minute>\d{2}))?\s*(?P<meridiem>a\.?m\.?|p\.?m\.?)\b",
     re.IGNORECASE,
 )
-
 
 PERIOD_RE = re.compile(
     r"\b(morning|noon|midday|afternoon|evening|night|tonight|midnight)\b",
@@ -218,10 +171,9 @@ class TemporalAnalyzer(BaseAnalyzer):
     ]
 
     all_tokens = sorted(set(span_tokens + extra), key=lambda t: t.i)
-    #text = " ".join(t.text for t in all_tokens)
     new_start = all_tokens[0].idx
     new_end = all_tokens[-1].idx + len(all_tokens[-1].text)
-    text = doc.text[new_start:new_end]
+    text = doc.text[new_start:new_end]   # original characters, not re-joined tokens
     return text, new_start, new_end
 
   def tokens_overlapping_span(self, doc, start_char, end_char):
@@ -280,15 +232,10 @@ class TemporalAnalyzer(BaseAnalyzer):
     return results
 
   def activity_label(self, activity):
-    """
-    Build a basic label from the activity verb and its direct
-    object, when available.
-    """
     object_tokens = []
 
     for child in activity.children:
         if child.dep_ in {"dobj", "obj"}:
-            # Include the noun phrase but avoid nested verbs.
             object_tokens.extend(
                 t for t in child.subtree
                 if t.pos_ not in {"VERB", "AUX"}
@@ -302,13 +249,7 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     return activity.text
 
-
   def get_ancestor_distances(self, token):
-    """
-    Return a dictionary mapping each ancestor token to its distance
-    from the supplied token.
-    The token itself is included at distance 0.
-    """
     distances = {}
     current = token
     distance = 0
@@ -320,7 +261,6 @@ class TemporalAnalyzer(BaseAnalyzer):
         current = current.head
         distance += 1
     return distances
-  
 
   def _resolve_weekday_date(self, reference_date, weekday_name, modifier):
     target_idx = WEEKDAY_INDEX[weekday_name.lower()]
@@ -335,8 +275,6 @@ class TemporalAnalyzer(BaseAnalyzer):
         return reference_date - timedelta(days=diff_back)
 
     if modifier == "double_next":
-        # "next to next <weekday>" / "<weekday> after next": skip TWO
-        # occurrences, not one.
         if diff == 0:
             diff = 7
         return reference_date + timedelta(days=diff + 14)      
@@ -349,16 +287,9 @@ class TemporalAnalyzer(BaseAnalyzer):
     if modifier in FORWARD_SKIP_IF_TODAY and diff == 0:
         diff = 7      
     
-    # Plain weekday, or this/coming/upcoming/following.
     return reference_date + timedelta(days=diff)
 
   def _find_weekday_match(self, text):
-    """
-    Checks the 'skip two occurrences' idioms first -- otherwise they'd be
-    swallowed or misread by the plain single-modifier WEEKDAY_RE (see the
-    comment above DOUBLE_NEXT_RE/AFTER_NEXT_RE). Returns a
-    (weekday_name, modifier) tuple, or None if nothing matched.
-    """
     m = DOUBLE_NEXT_RE.search(text)
     if m:
         return m.group("weekday"), "double_next"
@@ -372,7 +303,6 @@ class TemporalAnalyzer(BaseAnalyzer):
         return m.group("weekday"), m.group("modifier")
  
     return None
-
 
   def _resolve_time_of_day(self, text):
     match = CLOCK_TIME_RE.search(text)
@@ -391,7 +321,6 @@ class TemporalAnalyzer(BaseAnalyzer):
         return PERIOD_DEFAULTS[match.group(1).lower()]
 
     return None
-
 
   def resolve_combined_temporal(self, combined_text, reference_dt):
     lowered = combined_text.lower()
@@ -434,69 +363,30 @@ class TemporalAnalyzer(BaseAnalyzer):
         print(f"Unexpected error: {e}")
     return resolved_dt.isoformat(), is_recurring, "explicit"
 
-
   def debug_temporal_paths(self, doc, temporal_spans):
-    for span in temporal_spans:
-        #print(f"\nTemporal span: {span['text']!r}")
-        start = span["start_char"]
-        end = span["end_char"]
+    return
 
-        for token in doc:
-            # Check whether this token overlaps the temporal span.
-            token_start = token.idx
-            token_end = token.idx + len(token.text)
-            if token_end <= start or token_start >= end:
-                continue
-            path = []
-            current = token
-            visited = set()
-            while current.i not in visited:
-                visited.add(current.i)
-                path.append(
-                    f"{current.text}({current.pos_}, {current.dep_})"
-                )
-                if current.head == current:
-                    break
-                current = current.head
-              
-            #print(f"  Token: {token.text!r}")
-            #print("  Ancestor path:", " -> ".join(path))
-  
   def find_activity_candidates(self, doc):
     candidates = []
     candidate_ids = set()
 
-    # ------------------------------------------------------
-    # Pass 1: Find meaningful verb candidates
-    # ------------------------------------------------------
     for token in doc:
-
         if token.pos_ != "VERB":
             continue
-
         if token.lemma_.lower() in NON_ACTIVITY_VERBS:
             continue
-
         if token.dep_ in {"aux", "auxpass"}:
             continue
-
         if token.i not in candidate_ids:
             candidates.append(token)
             candidate_ids.add(token.i)
 
-    # ------------------------------------------------------
-    # Pass 2: Find activity nouns connected to a verb
-    # ------------------------------------------------------
     for token in doc:
-
         if token.pos_ not in {"NOUN", "PROPN"}:
             continue
-
         if token.lemma_.lower() not in EVENT_NOUNS:
             continue
 
-        # Walk up the dependency tree to check whether this noun
-        # is connected to a verb. Include helper verbs in this check.
         ancestor = token.head
         connected_to_verb = False
 
@@ -511,22 +401,9 @@ class TemporalAnalyzer(BaseAnalyzer):
             candidates.append(token)
             candidate_ids.add(token.i)
 
-    # Keep candidates in their original sentence order.
     candidates.sort(key=lambda t: t.i)
-
-    #print("Activity candidates:")
-    #for candidate in candidates:
-    #    print(
-    #        f"Text: {candidate.text!r}, "
-    #        f"Lemma: {candidate.lemma_!r}, "
-    #        f"POS: {candidate.pos_}, "
-    #        f"Dependency: {candidate.dep_}, "
-    #        f"Head: {candidate.head.text!r}"
-    #    )
     return candidates
 
-
-  
   def find_temporal_spans(self, doc):
     found = []
     for ent in doc.ents:
@@ -570,13 +447,6 @@ class TemporalAnalyzer(BaseAnalyzer):
         text, start_char, end_char = result
         expanded.append({**item, "text": text, "start_char": start_char, "end_char": end_char})
 
-    # Sort so that, among overlapping spans, the LONGEST one wins -- not
-    # whichever source happens to come first. spaCy's NER sometimes tags
-    # only part of a phrase (e.g. "Tuesday" alone inside "Tuesday after
-    # next"), while the regex fallback captures the complete idiom; if
-    # both start at the same character, preferring spacy_entity
-    # unconditionally would silently keep the shorter, wrong span.
-    # Only once length is equal do we prefer spacy_entity as a tiebreak.
     expanded.sort(key=lambda x: (x["start_char"], -(x["end_char"] - x["start_char"]), x["source"] != "spacy_entity"))
 
     unique = []
@@ -589,15 +459,11 @@ class TemporalAnalyzer(BaseAnalyzer):
         if not overlaps_existing:
             unique.append(item)
 
-    #print("temporal span")
-    #print(unique)
-    
     for item in unique:
         if FREQUENCY_ONLY_RE.match(item["text"]):
             item["label"] = "RECURRENCE"
 
     return sorted(unique, key=lambda x: x["start_char"])
-
 
   def find_activity_from_dependency(self, token, activity_candidates):
     if not activity_candidates:
@@ -606,35 +472,18 @@ class TemporalAnalyzer(BaseAnalyzer):
     ancestor_path = self.ancestor_chain(token)
     candidate_ids = {c.i for c in activity_candidates}
 
-    # ------------------------------------------------------
-    # Pass 1: Walk ancestors closest-first. At each ancestor, prefer
-    # a more specific action reachable from THAT ancestor alone (its
-    # own xcomp / prep("for")->pcomp children) over the ancestor
-    # itself; otherwise, if the ancestor itself is a candidate, take
-    # it. Stop at the first ancestor that produces any match.
-    #
-    # This must be done one ancestor at a time, not aggregated across
-    # the whole chain at once: aggregating let a distant, unrelated
-    # xcomp hanging off the sentence's ROOT verb (e.g. "need -> buy")
-    # win for every temporal expression in a multi-clause sentence,
-    # even when a much closer, correct ancestor (e.g. "taking") was
-    # already a valid direct match.
-    # ------------------------------------------------------
     for ancestor in ancestor_path:
         extended = [
             (candidate, depth) for candidate, depth in self.deeper_action_candidates(ancestor)
             if candidate.i in candidate_ids
         ]
         if extended:
-            extended.sort(key=lambda pair: -pair[1])  # deepest/most specific first
+            extended.sort(key=lambda pair: -pair[1])
             return extended[0][0]
 
         if ancestor.i in candidate_ids:
             return ancestor
 
-    # ------------------------------------------------------
-    # Pass 2: Shared governing verb fallback
-    # ------------------------------------------------------
     temporal_ancestors = self.get_ancestor_distances(token)
 
     fallback_matches = []
@@ -645,8 +494,6 @@ class TemporalAnalyzer(BaseAnalyzer):
 
         candidate_ancestors = self.get_ancestor_distances(candidate)
 
-        # Find shared ancestors between the temporal token and
-        # the candidate activity noun.
         shared_ancestors = (
             set(temporal_ancestors.keys())
             & set(candidate_ancestors.keys())
@@ -656,7 +503,6 @@ class TemporalAnalyzer(BaseAnalyzer):
             shared_ancestor, temporal_distance = temporal_ancestors[ancestor_id]
             _, candidate_distance = candidate_ancestors[ancestor_id]
 
-            # Require a verb to act as the shared governing point.
             if shared_ancestor.pos_ not in {"VERB", "AUX"}:
                 continue
 
@@ -670,8 +516,6 @@ class TemporalAnalyzer(BaseAnalyzer):
             
             fallback_matches.append((candidate, temporal_distance + candidate_distance))
 
-    # Deduplicate candidates in case more than one shared ancestor
-    # produced a match.
     unique_matches = {}
 
     for candidate, distance in fallback_matches:
@@ -683,14 +527,10 @@ class TemporalAnalyzer(BaseAnalyzer):
         return next(iter(unique_matches.values()))[0]
 
     if len(unique_matches) > 1:
-        # Do not guess when several activity nouns qualify.
-        # A later context-building stage can resolve ambiguity.
         return None
 
     return None
 
-  
-  
   def extract_temporal_activities(self, doc, text):
     temporal_spans = self.find_temporal_spans(doc)
     activities = self.find_activity_candidates(doc)
@@ -701,9 +541,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             for s in temporal_spans
         )
     ]
-    
     self.debug_temporal_paths(doc, temporal_spans)
-    # One result bucket per activity token.
     results = {}
     for activity in activities:
         results[activity.i] = {
@@ -713,16 +551,11 @@ class TemporalAnalyzer(BaseAnalyzer):
             "temporal_expressions": [],
         }
 
-    # Associate each temporal expression with an activity using
-    # the dependency path from its token(s).
     for span in temporal_spans:
         span_tokens = self.tokens_overlapping_span(
             doc, span["start_char"], span["end_char"],
         )
         associated_activity = None
-        # A span may contain multiple tokens, such as "9pm tomorrow".
-        # Check each token and take the first dependency-supported
-        # activity found.
         for span_token in span_tokens:
             associated_activity = self.find_activity_from_dependency(
                 span_token, activities,
@@ -755,13 +588,6 @@ class TemporalAnalyzer(BaseAnalyzer):
             expression_result
         )
 
-        #print(
-        #    f"{span['text']!r} "
-        #    f"--> activity={associated_activity.text!r} "
-        #    f"(dependency-supported)"
-        #)
-    # Return only activities that received at least one temporal
-    # expression. Keep all their original temporal wording.
     output = []
 
     for item in results.values():
@@ -773,22 +599,56 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     return output
 
+  def parse_recurrence(self, text):
+    """
+    Extract recurrence metadata from text, or None if there is none.
+    Returns {"frequency", "interval", "day_of_week", "marker"}.
+    frequency is None when we only know it repeats ("alternate", "each").
+    """
+    m = EVERY_OTHER_RE.search(text)
+    if m:
+        unit = m.group("unit").lower()
+        if unit in WEEKDAY_INDEX:
+            return {"frequency": "weekly", "interval": 2, "day_of_week": unit, "marker": m.group(0)}
+        return {"frequency": UNIT_TO_FREQUENCY[unit], "interval": 2, "day_of_week": None, "marker": m.group(0)}
+
+    m = EVERY_UNIT_RE.search(text)
+    if m:
+        return {"frequency": UNIT_TO_FREQUENCY[m.group("unit").lower()], "interval": 1,
+                "day_of_week": None, "marker": m.group(0)}
+
+    m = EVERY_WEEKDAY_RE.search(text)
+    if m:
+        return {"frequency": "weekly", "interval": 1,
+                "day_of_week": m.group("weekday").lower(), "marker": m.group(0)}
+
+    m = FREQUENCY_WORD_RE.search(text)
+    if m:
+        frequency, interval = FREQUENCY_WORDS[m.group("word").lower()]
+        return {"frequency": frequency, "interval": interval, "day_of_week": None, "marker": m.group(0)}
+
+    m = re.search(r"\b(?:every|each|alternate)\b", text, re.IGNORECASE)
+    if m:
+        return {"frequency": None, "interval": None, "day_of_week": None, "marker": m.group(0)}
+
+    return None
+
   def build_temporal_entities(self, temporal_activities, reference_dt=None):
     if reference_dt is None:
         reference_dt = datetime.now(ZoneInfo(self.timezone_name))
- 
+
     temporal_entities = []
- 
+
     for item in temporal_activities:
         exprs = item["temporal_expressions"]
         date_exprs = [e for e in exprs if e["label"] != "RECURRENCE"]
         recur_exprs = [e for e in exprs if e["label"] == "RECURRENCE"]
- 
+
         # Recurrence is read from ALL expressions (so "Every Thursday" and a
         # standalone "monthly" are both seen), but only real date/time text
         # is used to resolve a datetime.
         recurrence = self.parse_recurrence(" ".join(e["text"] for e in exprs))
- 
+
         if date_exprs:
             combined_text = " ".join(e["text"] for e in date_exprs)
             resolved_datetime, is_recurring, date_source = self.resolve_combined_temporal(
@@ -798,7 +658,7 @@ class TemporalAnalyzer(BaseAnalyzer):
             # Frequency only ("a monthly review"): recurring, but no anchor date.
             combined_text = " ".join(e["text"] for e in recur_exprs)
             resolved_datetime, is_recurring, date_source = None, True, "recurrence_only"
- 
+
         temporal_entities.append({
             "text": combined_text,
             "resolved_datetime": resolved_datetime,
@@ -808,10 +668,8 @@ class TemporalAnalyzer(BaseAnalyzer):
             "activity": item["activity"],
         })
     return temporal_entities
-  
 
   def analyze(self, doc, raw_text):
-    temporal_entities = []
     temporal_activities = self.extract_temporal_activities(doc, raw_text)
     final_output = self.build_temporal_entities(temporal_activities)
     return final_output
