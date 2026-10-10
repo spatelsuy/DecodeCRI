@@ -30,6 +30,8 @@ DATE_PATTERNS = [
     r"\btomorrow\b",
     r"\btoday\b",
     r"\byesterday\b",
+    r"\bnext week\b",
+    r"\bweek after next\b",
     rf"\bnext\s+to\s+next\s+{WEEKDAYS}\b",
     rf"\b(?:this|next|coming|following|last|previous|upcoming)\s+{WEEKDAYS}\b",
     rf"\b{WEEKDAYS}\s+after next\b",
@@ -44,6 +46,20 @@ TIME_PATTERNS = [
 
 DATE_REGEX = re.compile("|".join(DATE_PATTERNS), re.IGNORECASE)
 TIME_REGEX = re.compile("|".join(TIME_PATTERNS), re.IGNORECASE)
+
+# A duration is not a scheduled date/time. This prevents expressions such as
+# "my eight hours of learning" from being emitted as temporal appointments.
+_NUMBER_WORDS = (
+    r"zero|one|two|three|four|five|six|seven|eight|nine|ten|"
+    r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|"
+    r"eighteen|nineteen|twenty|a|an|couple of|few"
+)
+DURATION_RE = re.compile(
+    rf"\b(?:\d+|{_NUMBER_WORDS})\s+"
+    r"(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\b",
+    re.IGNORECASE,
+)
+NEXT_WEEK_RE = re.compile(r"\b(?P<period>next week|week after next)\b", re.IGNORECASE)
 
 _EXPAND_ALLOWED_DEPS = {"det", "amod", "nummod", "compound", "poss", "appos"}
 
@@ -403,10 +419,20 @@ class TemporalAnalyzer(BaseAnalyzer):
 
     target_date = None
 
+    # Resolve week-level expressions to the Monday that starts the named week.
+    # For "next week", this means the next Monday after the current week.
+    week_match = NEXT_WEEK_RE.search(lowered)
     rel_match = RELATIVE_DAY_RE.search(lowered)
     weekday_match = self._find_weekday_match(combined_text)
 
-    if rel_match:
+    if week_match:
+        days_until_monday = (0 - reference_date.weekday()) % 7
+        if days_until_monday == 0:
+            days_until_monday = 7
+        target_date = reference_date + timedelta(days=days_until_monday)
+        if week_match.group("period").lower() == "week after next":
+            target_date += timedelta(days=7)
+    elif rel_match:
         rel = rel_match.group("rel").lower()
         offset = {
             "today": 0, "tomorrow": 1, "day after tomorrow": 2,
@@ -531,6 +557,11 @@ class TemporalAnalyzer(BaseAnalyzer):
     found = []
     for ent in doc.ents:
         if ent.label_ in {"DATE", "TIME"}:
+            # Ignore duration entities such as "eight hours". Dependency
+            # expansion below may add words like "my", so we filter again
+            # after expansion as well.
+            if DURATION_RE.search(ent.text):
+                continue
             found.append({
                 "text": ent.text,
                 "start_char": ent.start_char,
@@ -588,6 +619,10 @@ class TemporalAnalyzer(BaseAnalyzer):
         )
         if not overlaps_existing:
             unique.append(item)
+
+    # Remove duration phrases after dependency expansion too (for example,
+    # an entity "eight hours" may expand to "my eight hours").
+    unique = [item for item in unique if not DURATION_RE.search(item["text"])]
 
     #print("temporal span")
     #print(unique)
@@ -729,6 +764,31 @@ class TemporalAnalyzer(BaseAnalyzer):
             if associated_activity is not None:
                 break
 
+        # Clause-start date safeguard: in speech such as
+        # "...buy grocery Tuesday I need to reach office...", a shared
+        # dependency ancestor can incorrectly attach Tuesday to "buy".
+        # If a DATE span is followed by a new subject + action-intent phrase,
+        # attach it to the first activity after that phrase instead.
+        if span["label"] == "DATE" and span_tokens:
+            span_sentence = span_tokens[0].sent
+            following = [
+                candidate for candidate in activities
+                if candidate.idx >= span["end_char"]
+                and candidate.sent.start == span_sentence.start
+            ]
+            if following:
+                following.sort(key=lambda candidate: candidate.idx)
+                next_candidate = following[0]
+                gap = doc.text[span["end_char"]:next_candidate.idx]
+                starts_new_clause = re.search(
+                    r"\b(?:I|we|you|he|she|they)\s+"
+                    r"(?:need|have|want|plan|will|must|should|can)\b",
+                    gap,
+                    re.IGNORECASE,
+                )
+                if starts_new_clause:
+                    associated_activity = next_candidate
+
         expression_result = {
             "text": span["text"],
             "label": span["label"],
@@ -807,7 +867,9 @@ class TemporalAnalyzer(BaseAnalyzer):
 
   def build_temporal_entities(self, temporal_activities, reference_dt=None):
     if reference_dt is None:
-        reference_dt = datetime.now(ZoneInfo(self.timezone_name))
+        # Use the analyzer's configured reference datetime so tests and
+        # production runs resolve relative dates consistently.
+        reference_dt = self.base_date
 
     temporal_entities = []
 
@@ -840,7 +902,30 @@ class TemporalAnalyzer(BaseAnalyzer):
             # Kept for traceability back to the activity this came from;
             # drop this key if you only want the fields shown above.
             "activity": item["activity"],
+            # Internal metadata used below for controlled date inheritance.
+            "_start_char": min(e["start_char"] for e in exprs),
+            "_has_calendar_date": any(e["label"] == "DATE" for e in date_exprs),
         })
+
+    # Resolve entities in the order they were spoken, not the order of the
+    # activity tokens. A time-only expression inherits the most recent
+    # explicit calendar date (e.g. Tuesday -> 8 am -> 4 pm).
+    temporal_entities.sort(key=lambda entity: entity["_start_char"])
+    inherited_date = None
+    for entity in temporal_entities:
+        resolved = entity["resolved_datetime"]
+        if entity["_has_calendar_date"] and resolved:
+            parsed = datetime.fromisoformat(resolved)
+            inherited_date = parsed.date()
+        elif not entity["_has_calendar_date"] and resolved and inherited_date:
+            parsed = datetime.fromisoformat(resolved)
+            inherited = datetime.combine(inherited_date, parsed.timetz())
+            entity["resolved_datetime"] = inherited.isoformat()
+            entity["date_source"] = "inherited"
+
+        entity.pop("_start_char", None)
+        entity.pop("_has_calendar_date", None)
+
     #return {"temporal_entities": temporal_entities}
     return temporal_entities
   
