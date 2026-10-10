@@ -4,7 +4,6 @@ from Common import *
 from BaseAnalyzer import BaseAnalyzer
 from TemporalAnalyzer import TemporalAnalyzer, EVENT_NOUNS, PCOMP_ACTIVITY_PREPS
 
-
 class ActionAnalyzer(BaseAnalyzer):
     """
     Emits EVERY activity in the text -- verbs AND event nouns -- not just verbs.
