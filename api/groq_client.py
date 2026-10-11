@@ -3,7 +3,8 @@ import requests
 import yaml
 import json
 from dotenv import load_dotenv
-from typing import Dict, Any
+from typing import Dict, List, Any
+import copy
 
 load_dotenv()
 
@@ -175,7 +176,124 @@ my_strict_schema = {
     "additionalProperties": False
 }
 
+my_linguistic_response_schema = {
+  "$schema": "http://json-schema.org/draft-2020-12/schema#",
+  "$id": "https://example.com/schedule_extraction_schema.json",
+  "title": "Linguistic Blueprint – Schedule Extraction",
+  "type": "object",
+  "required": ["LINGUISTIC_BLUEPRINT"],
+  "additionalProperties": false,
+  "properties": {
+    "LINGUISTIC_BLUEPRINT": {
+      "type": "object",
+      "required": ["overall_assumptions", "considerations", "activities"],
+      "additionalProperties": false,
+      "properties": {
+        "overall_assumptions": {
+          "type": "object",
+          "description": "Global premises used for all activities.",
+          "required": [
+            "reference_date",
+            "today",
+            "tomorrow",
+            "time_zone",
+            "implicit_times"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "reference_date": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-11"
+            },
+            "today": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-11"
+            },
+            "tomorrow": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-10-12"
+            },
+            "time_zone": {
+              "type": "string",
+              "description": "Time‑zone context (unspecified → local).",
+              "example": "unspecified (assumed local)"
+            },
+            "implicit_times": {
+              "type": "string",
+              "description": "Rule for handling “before X” and vague times.",
+              "example": "When the paragraph says “before X”, schedule at the latest feasible minute before X; when no exact time is given, use a reasonable midpoint between surrounding events."
+            }
+          }
+        },
 
+        "considerations": {
+          "type": "array",
+          "description": "General methodological notes.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "example": [
+            "All times are expressed in ISO‑8601 (YYYY‑MM‑DDTHH:mm:ss).",
+            "Activities described as “before X” are placed one minute prior to X."
+          ]
+        },
+
+        "activities": {
+          "type": "array",
+          "description": "List of extracted activities with full reasoning.",
+          "items": {
+            "type": "object",
+            "required": [
+              "activity",
+              "time",
+              "assumption",
+              "reasoning",
+              "why_time_selected"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "activity": {
+                "type": "string",
+                "description": "Verb‑noun phrase describing the action."
+              },
+              "time": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Concrete timestamp in ISO‑8601 (YYYY‑MM‑DDTHH:mm:ss).",
+                "example": "2026-10-11T09:59:00"
+              },
+              "assumption": {
+                "type": "string",
+                "description": "Context‑driven assumption made to place the activity."
+              },
+              "reasoning": {
+                "type": "string",
+                "description": "Short narrative of how the time was derived from the paragraph."
+              },
+              "why_time_selected": {
+                "type": "string",
+                "description": "Why this exact minute satisfies the constraints."
+              }
+            }
+          },
+          "example": [
+            {
+              "activity": "Take bath",
+              "time": "2026-10-11T09:59:00",
+              "assumption": "The bath must finish before 10 am; scheduled at the latest feasible minute.",
+              "reasoning": "Paragraph says \"complete taking bath before 10am\" – choose 09:59:00.",
+              "why_time_selected": "Meets the ‘before 10am’ requirement while leaving a minute buffer."
+            }
+          ]
+        }
+      }
+    }
+  }
+}
 
 
 #model="mixtral-8x7b-32768"
@@ -431,11 +549,6 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="opena
 
     return _repair(parsed)
 
-
-
-
-
-
 def call_groqJSON_OLD(system_prompt: str, user_payload: Dict[str, Any], model="llama-3.1-8b-instant"):
     GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY_PAID")
     #GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY")
@@ -526,6 +639,125 @@ def call_groqJSON_OLD(system_prompt: str, user_payload: Dict[str, Any], model="l
         
     return parsed
 
+def _repairPreCheck(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    parsed = copy.deepcopy(parsed)
+    blueprint = parsed.setdefault("LINGUISTIC_BLUEPRINT", {})
 
+    overall = blueprint.setdefault("overall_assumptions", {})
+    overall.setdefault("reference_date", "1970-01-01")   # fallback ISO‑date
+    overall.setdefault("today", "1970-01-01")
+    overall.setdefault("tomorrow", "1970-01-02")
+    overall.setdefault("time_zone", "unspecified (assumed local)")
+    overall.setdefault(
+        "implicit_times",
+        "When the paragraph says “before X”, schedule at the latest feasible minute before X; "
+        "when no exact time is given, use a reasonable midpoint between surrounding events."
+    )
 
+    blueprint.setdefault("considerations", [])
+    activities: List[Dict[str, Any]] = blueprint.setdefault("activities", [])
+    required_activity_keys = [
+        "activity",
+        "time",
+        "assumption",
+        "reasoning",
+        "why_time_selected",
+    ]
 
+    for act in activities:
+        if not isinstance(act, dict):
+            continue
+        for key in required_activity_keys:
+            act.setdefault(key, "")
+        if not act["time"]:
+            act["time"] = "1970-01-01T00:00:00"
+    return parsed
+
+def call_groqJSONPreCheck(system_prompt: str, user_payload: Dict[str, Any], model="openai/gpt-oss-120b", reasoning_effort: str = "medium"):
+    GROQ_API_KEY = os.getenv("PROMPT_GROQ_KEY_PAID")
+    if not GROQ_API_KEY:
+        raise RuntimeError("PROMPT_GROQ_KEY_PAID not found in environment variables")
+
+    user_prompt = json.dumps(user_payload, indent=2)
+    print("\nMODEL === ", model, " | reasoning_effort =", reasoning_effort)
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "temperature": 0,
+        "max_tokens": 8192,
+        "include_reasoning": False,
+        "reasoning_effort": reasoning_effort,  # left at Groq's default — nothing changes unless you opt to test "low"
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "schedule_extraction_registry",
+                "strict": True,
+                "schema": my_linguistic_response_schema
+            }
+        }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=60)
+
+    # Log usage on every call — tells us how much of max_tokens reasoning is actually consuming,
+    # so we have real data instead of guessing next time something goes wrong.
+    try:
+        usage = response.json().get("usage")
+        if usage:
+            print("USAGE:", json.dumps(usage))
+    except Exception:
+        pass
+
+    if response.status_code != 200:
+        try:
+            print("Status code=", response.status_code)
+            err_obj = response.json()
+            failed_gen = err_obj.get("error", {}).get("failed_generation")
+            if failed_gen:
+                salvaged = json.loads(failed_gen)
+                print("⚠️ Schema validation failed — salvaged from failed_generation instead of discarding.")
+                return _repairPreCheck(salvaged)
+        except Exception as salvage_err:
+            print("Salvage attempt also failed:", salvage_err)
+
+        raise Exception(f"Groq API error: {response.text}")
+
+    message_obj = response.json()["choices"][0]["message"]
+    raw_output = message_obj.get("content", "")
+    if not raw_output or raw_output.strip() == "":
+        print("\n--- DEBUG ERROR ---")
+        print("Groq Response JSON structure:", response.json())
+        raise Exception("LLM content field came back completely empty. Check reasoning fields.")
+    raw_output = raw_output.strip()
+
+    cleaned = raw_output.replace("```json", "").replace("```", "").strip()
+    if not cleaned.startswith("{"):
+        start_idx = cleaned.find("{")
+        end_idx = cleaned.rfind("}") + 1
+        if start_idx != -1 and end_idx != 0:
+            cleaned = cleaned[start_idx:end_idx]
+
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        print("\n" + "="*50)
+        print("PRECHECK - CRITICAL: JSON DECODE ERROR ENCOUNTERED!")
+        print(f"Error Message: {e}")
+        print("PRECHECK - EXACT RAW OUTPUT RECEIVED FROM MODEL:")
+        print(raw_output)
+        print("="*50 + "\n")
+        raise Exception(f"PRECHECK - LLM did not return valid JSON syntax. Decode Error: {e}")
+
+    if not isinstance(parsed, dict):
+        raise Exception("PRECHECK - LLM did not return a valid JSON object map")
+
+    return _repair(parsed)
