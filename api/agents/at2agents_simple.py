@@ -23,6 +23,9 @@ When only a range or no explicit time is given, pick a **reasonable midpoint** b
 Assume:
 - “today” = "{{CURRENT_DATE}}" format IS YYYY-MM-DD
 - "time‑zone" = "{{TIMEZONE}}"
+- If no time is given for a day-long event, use 09:00 as a typical start time.
+- If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
+- If user has provided time, consider it. 
 
 **Output must be a single JSON object with the exact key `LINGUISTIC_BLUEPRINT`.**  
 The JSON must contain:
@@ -48,14 +51,19 @@ You will receive a JSON payload with two keys. Treat them as follows:
 2. "LINGUISTIC_BLUEPRINT" -> This contains the first-pass structural data that contain activities, its timestamp, the assumption, reasoning and why_time_selected.
 
 The user_speech_transcript may be unpunctuated, conversational, fragmented, repetitive, partially incorrect due to speech-to-text errors, or code-switched (e.g. English + Hindi / Hinglish).
+Your main tasks are:
+1. Ensure the set of activities provided in LINGUISTIC_BLUEPRINT are correct and complete with respect to its timestamp, the reasoning, assumption and why_time_selected. 
+2. Put the activities in 3 buckets (tasks, events and remainders as given in the JSON schema.
 
 Today's date is: "{{CURRENT_DATE}}"
 Date format: YYYY-MM-DD
+
 """
 
 
 VALIDATION_PROMPT = """
-You are a data validation utility. Your job is to audit a structured JSON object against the raw text it was extracted from and correct any mistakes.
+You are a data validation utility. 
+Your job is to audit a structured JSON object against the raw text it was extracted from and correct any mistakes.
 
 Today's date is: "{{CURRENT_DATE}}"
 Day of the week: "{{CURRENT_DAY_OF_WEEK}}"
