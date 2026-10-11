@@ -166,7 +166,7 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
       return {"categorization_json": {"error": "No valid text to validate"}}
 
     json_to_analyze = state.get("categorization_json", "")
-    #print("json_to_analyze=======\n", json_to_analyze);
+    print("json_to_validate=======\n", json_to_analyze);
     if not json_to_analyze or "Error during transcription" in json_to_analyze:
       return {"categorization_json": {"error": "No valid text to validate"}} 
 
@@ -181,7 +181,6 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     
     try:
       # Call your existing function using a smart, large context model
-      #today_date = datetime.today().strftime('%Y-%m-%d')
       today_date = datetime.now(ZoneInfo(user_tz)).strftime('%Y-%m-%d')
       client_time = state["client_time"]
       dt_obj = datetime.strptime(client_time, '%Y-%m-%d')
@@ -193,7 +192,7 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
         user_payload=user_payload,
         model="openai/gpt-oss-120b"
       )
-      print("\n===============PROMPT 1 validated_json============\n", analysis_result)
+      print("\n===============PROMPT 2 validated_json============\n", analysis_result)
       print_json_diff(json_to_analyze, analysis_result)
       # This will be a standard Python dictionary containing the organized structure
       return {"categorization_json": analysis_result}
