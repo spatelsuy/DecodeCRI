@@ -8,14 +8,46 @@ from zoneinfo import ZoneInfo
 
 from typing import Dict, Any
 from models import AudioProcessingState
-from groq_client import call_groq, call_groq_transcribe, call_groqJSON
+from groq_client import call_groq, call_groq_transcribe, call_groqJSON, call_groqJSONPreCheck
 
+
+A2T_PRECHECK = """
+You are an expert schedule‑extractor and reasoning engine.  
+From the paragraph supplied by the user, identify **every distinct activity** and assign a concrete date‑time in ISO‑8601 format (YYYY‑MM‑DDTHH:mm:ss).  
+
+When the text says “before X”, place the activity at the **latest feasible minute** that still satisfies the constraint (e.g., one minute before X).  
+When only a range or no explicit time is given, pick a **reasonable midpoint** between surrounding anchored events, using everyday scheduling logic.  
+
+**Any assumption should be context driven.**  
+
+Assume:
+- “today” = "{{CURRENT_DATE}}" format IS YYYY-MM-DD
+- "time‑zone" = "{{TIMEZONE}}"
+
+**Output must be a single JSON object with the exact key `LINGUISTIC_BLUEPRINT`.**  
+The JSON must contain:
+1. `overall_assumptions` – a short map of the global premises you used (reference date, today/tomorrow, time‑zone, handling of “before”, etc.).  
+2. `considerations` – an array of bullet‑style notes that explain the general rules you followed while converting natural‑language constraints into timestamps.  
+3. `activities` – an array of objects, each with the following fields:  
+   - `activity` (string) – the verb‑noun phrase describing what is done.  
+   - `time` (string) – the concrete timestamp in ISO‑8601 (`YYYY‑MM‑DDTHH:mm:ss`).  
+   - `assumption` (string) – any local, **context‑driven** assumption you had to make for this entry (e.g., “chosen as midpoint between 10 am and 1 pm”).  
+   - `reasoning` (string) – a short narrative of how you derived the time from the paragraph.  
+   - `why_time_selected` (string) – why the exact minute you chose satisfies the user’s constraints.
+
+**Do not add any extra keys or explanatory text outside the JSON.**  
+If the paragraph contains no recognizable activity, return an empty `activities` array but still include the top‑level keys.
+
+"""
 
 A2T_PROMPT = """
 You are an intelligent assistant that converts raw spoken text into structured personal organization data.
-Identity set of activities. Do not assume. Do not hallucinate. 
+INSTRUCTIONS FOR READING THE INPUT PAYLOAD:
+You will receive a JSON payload with two keys. Treat them as follows:
+1. "user_speech_transcript" -> This contains the raw spoken text from the user. Use this as your source of truth.
+2. "LINGUISTIC_BLUEPRINT" -> This contains the first-pass structural data that contain activities, its timestamp, the assumption, reasoning and why_time_selected.
 
-The text may be unpunctuated, conversational, fragmented, repetitive, partially incorrect due to speech-to-text errors, or code-switched (e.g. English + Hindi / Hinglish).
+The user_speech_transcript may be unpunctuated, conversational, fragmented, repetitive, partially incorrect due to speech-to-text errors, or code-switched (e.g. English + Hindi / Hinglish).
 
 Today's date is: "{{CURRENT_DATE}}"
 Date format: YYYY-MM-DD
@@ -65,17 +97,48 @@ def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
 
 
 def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
-    print("--- PROMPT 1 (extracting activities) ---")
-    
-    text_to_analyze = state.get("transcription_text", "")
-    if not text_to_analyze or "Error during transcription" in text_to_analyze:
-        return {"categorization_json": {"error": "No valid text to analyze"}}
-
+    print("--- PROMPT 0 perform precheck and extract activities ---")
+    precheck_result = {}
     DEFAULT_TIMEZONE = "UTC"
     user_tz = state.get("user_timezone") or DEFAULT_TIMEZONE
+    try:
+        tzinfo = ZoneInfo(user_tz)
+    except ZoneInfoNotFoundError:
+        log.warning("Invalid timezone %s – falling back to %s", user_tz, DEFAULT_TIMEZONE)
+        tzinfo = ZoneInfo(DEFAULT_TIMEZONE)
+        user_tz = DEFAULT_TIMEZONE    
     
+    text_to_analyze = state.get("transcription_text", "").strip()
+    if not text_to_analyze or "Error during precheck" in text_to_analyze:
+        return {"categorization_json": {"error": "No valid text to analyze"}}
+
+    user_payload_precheck = {"user_speech_transcript": text_to_analyze}
+    client_time = state.get("client_time", datetime.now(tzinfo).strftime("%Y-%m-%d"))
+    final_prompt_precheck = (
+        A2T_PRECHECK
+        .replace("{{CURRENT_DATE}}", client_time)
+        .replace("{{TIMEZONE}}", user_tz)
+    )    
+    try:
+      raw_result = call_groqJSONPreCheck(
+        system_prompt=final_prompt_precheck,
+        user_payload=user_payload_precheck,
+        model="openai/gpt-oss-120b"
+      )
+      if not isinstance(raw_result, dict):
+          log.error("LLM returned non‑dict: %r", raw_result)
+          precheck_result = {}
+      else:
+          precheck_result = raw_result
+      print("\n===============PROMPT 0 precheck_json============\n", precheck_result);
+    except Exception as e:
+      print(f"preheck Node Error: {e}")
+      precheck_result = {}
+    
+    print("--- PROMPT 1 (extracting activities) ---")
     user_payload = {
-        "user_speech_transcript": text_to_analyze
+        "user_speech_transcript": text_to_analyze, 
+        "LINGUISTIC_BLUEPRINT": precheck_result
     }
     
     try:
