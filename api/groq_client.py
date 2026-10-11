@@ -182,12 +182,12 @@ my_linguistic_response_schema = {
   "title": "Linguistic Blueprint – Schedule Extraction",
   "type": "object",
   "required": ["LINGUISTIC_BLUEPRINT"],
-  "additionalProperties": false,
+  "additionalProperties": False,
   "properties": {
     "LINGUISTIC_BLUEPRINT": {
       "type": "object",
       "required": ["overall_assumptions", "considerations", "activities"],
-      "additionalProperties": false,
+      "additionalProperties": False,
       "properties": {
         "overall_assumptions": {
           "type": "object",
@@ -199,7 +199,7 @@ my_linguistic_response_schema = {
             "time_zone",
             "implicit_times"
           ],
-          "additionalProperties": false,
+          "additionalProperties": False,
           "properties": {
             "reference_date": {
               "type": "string",
