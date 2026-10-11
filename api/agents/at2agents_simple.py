@@ -107,13 +107,13 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         log.warning("Invalid timezone %s – falling back to %s", user_tz, DEFAULT_TIMEZONE)
         tzinfo = ZoneInfo(DEFAULT_TIMEZONE)
         user_tz = DEFAULT_TIMEZONE    
-    
+
+    client_time = state.get("client_time", datetime.now(tzinfo).strftime("%Y-%m-%d"))
     text_to_analyze = state.get("transcription_text", "").strip()
     if not text_to_analyze or "Error during precheck" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
 
     user_payload_precheck = {"user_speech_transcript": text_to_analyze}
-    client_time = state.get("client_time", datetime.now(tzinfo).strftime("%Y-%m-%d"))
     final_prompt_precheck = (
         A2T_PRECHECK
         .replace("{{CURRENT_DATE}}", client_time)
@@ -143,10 +143,6 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     
     try:
       # Call your existing function using a smart, large context model
-      #today_date = datetime.today().strftime('%Y-%m-%d')
-      today_date = datetime.now(ZoneInfo(user_tz)).strftime('%Y-%m-%d')
-
-      client_time = state["client_time"]
       final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', client_time)
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
@@ -160,7 +156,6 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     except Exception as e:
       print(f"Categorization Node Error: {e}")
       return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
-
 
 
 def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
