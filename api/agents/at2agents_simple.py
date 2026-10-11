@@ -122,9 +122,9 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
         user_payload=user_payload,
         model="openai/gpt-oss-120b"
       )
+      print("\n===============PROMPT 1 validated_json============\n", analysis_result)
       print_json_diff(json_to_analyze, analysis_result)
       # This will be a standard Python dictionary containing the organized structure
-      print("\n===============PROMPT 1 categorization_json============\n", analysis_result);  
       return {"categorization_json": analysis_result}
         
     except Exception as e:
