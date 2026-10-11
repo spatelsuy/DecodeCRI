@@ -103,7 +103,7 @@ Enrich the "title" and "context" by making it complete senetence,  however do no
 """
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
-    print(f"--- Node 1: Transcribing via Raw Requests for {state['user_name']} ---")
+    print(f"--- Transcribing via Raw Requests for {state['user_name']} ---")
     
     try:
         # Call the new direct request function
@@ -234,9 +234,6 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
          .replace("{{TIMEZONE}}", user_tz)
          .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
       )
-      print(final_prompt)
-      print("linguistic_blueprint =========")
-      print(linguistic_blueprint)
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
         user_payload=user_payload,
