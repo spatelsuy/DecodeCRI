@@ -21,11 +21,15 @@ When only a range or no explicit time is given, pick a **reasonable midpoint** b
 **Any assumption should be context driven.**  
 
 Assume:
-- “today” = "{{CURRENT_DATE}}" format IS YYYY-MM-DD
-- "time‑zone" = "{{TIMEZONE}}"
+- today = "{{CURRENT_DATE}}" format IS YYYY-MM-DD
+- DAY_OF_WEEK = "{{CURRENT_DAY_OF_WEEK}}"
+- time‑zone = "{{TIMEZONE}}"
 - If no time is given for a day-long event, use 09:00 as a typical start time.
 - If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
-- If user has provided time, consider it. 
+- If user has provided time, consider it.
+
+AUDIT CHECKLIST:
+1. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}", which is today and it is "{{CURRENT_DAY_OF_WEEK}}". Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
 
 **Output must be a single JSON object with the exact key `LINGUISTIC_BLUEPRINT`.**  
 The JSON must contain:
@@ -40,7 +44,6 @@ The JSON must contain:
 
 **Do not add any extra keys or explanatory text outside the JSON.**  
 If the paragraph contains no recognizable activity, return an empty `activities` array but still include the top‑level keys.
-
 """
 
 A2T_PROMPT = """
@@ -56,7 +59,9 @@ Your main tasks are:
 2. Put the activities in 3 buckets (tasks, events and remainders as given in the JSON schema.
 
 Assume:
-- “today” = "{{CURRENT_DATE}}" format IS YYYY-MM-DD
+- today: "{{CURRENT_DATE}}" format IS YYYY-MM-DD
+- Day of the week: "{{CURRENT_DAY_OF_WEEK}}"
+- time‑zone: "{{TIMEZONE}}"
 - If no time is given for a day-long event, use 09:00 as a typical start time.
 - If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
 - If user has provided time, consider it. 
@@ -68,6 +73,8 @@ Your job is to audit a structured JSON object against the raw text it was extrac
 
 Today's date is: "{{CURRENT_DATE}}"
 Day of the week: "{{CURRENT_DAY_OF_WEEK}}"
+time‑zone: "{{TIMEZONE}}"
+
 Assume:
 - If no time is given for a day-long event, use 09:00 as a typical start time.
 - If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
@@ -83,7 +90,7 @@ You will receive a JSON payload with two keys. Treat them as follows:
 AUDIT CHECKLIST:
 1. MISSING DATA: Compare "user_speech_transcript" to activities in "LINGUISTIC_BLUEPRINT" to "extracted_json". Are there any tasks, events, or reminders present in the transcript that were left out of the JSON in "extracted_json"? If so, add them.
 2. INVALID COPIES: Look inside "extracted_json". Did the first pass create redundant duplicates (e.g., creating an entry under 'notes' for details already explained inside a task)? If so, clean them up.
-3. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}" and "{{CURRENT_DAY_OF_WEEK}}". Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
+3. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}" and "{{CURRENT_DAY_OF_WEEK}}" . Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
 4. SOURCE VERIFICATION: Check the "source_segment" field. Ensure the text snippet inside it actually exists word-for-word in the "user_speech_transcript". If you modify an item's date or time during this audit, ensure the "source_segment" still reflects the text that provided that context.
 5. Ensure the set of activities provided in LINGUISTIC_BLUEPRINT are correct and complete with respect to its timestamp, the reasoning, assumption and why_time_selected. If correct, adopt those.
 
@@ -125,6 +132,8 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
 
     now = datetime.now(tzinfo)
     client_time = state.get("client_time", now.strftime("%Y-%m-%d"))
+    day_of_week = now.strftime('%A')
+    
     text_to_analyze = state.get("transcription_text", "").strip()
     if not text_to_analyze or "Error during precheck" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
@@ -134,6 +143,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         A2T_PRECHECK
         .replace("{{CURRENT_DATE}}", client_time)
         .replace("{{TIMEZONE}}", user_tz)
+        .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
     )    
     try:
       raw_result = call_groqJSONPreCheck(
@@ -159,7 +169,12 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     
     try:
       # Call your existing function using a smart, large context model
-      final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', client_time)
+      final_prompt = (
+         A2T_PROMPT
+         .replace('{{CURRENT_DATE}}', client_time)
+         .replace("{{TIMEZONE}}", user_tz)
+         .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
+      )
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
         user_payload=user_payload,
@@ -216,6 +231,7 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
       final_prompt = (
          VALIDATION_PROMPT
          .replace('{{CURRENT_DATE}}', client_time)
+         .replace("{{TIMEZONE}}", user_tz)
          .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
       )
       print(final_prompt)
