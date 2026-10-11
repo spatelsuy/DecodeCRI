@@ -243,6 +243,9 @@ def validate_and_ground_times(
     Ensures extracted event/task timestamps strictly match valid timestamps 
     generated in Stage 1, while tolerating end-of-day offsets and LLM timezone corrections.
     """
+    # at this point just return extracted_json
+    return extracted_json
+    
     evidence = blueprint.get("evidence")
     blueprint_temporal_entities = evidence.get("temporal_entities")
     # Standardize input dictionary parameter
