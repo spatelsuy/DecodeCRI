@@ -3,7 +3,9 @@ import yaml
 import time
 import difflib
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 from typing import Dict, Any
 from models import AudioProcessingState
 from groq_client import call_groq, call_groq_transcribe, call_groqJSON
@@ -68,6 +70,9 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
+
+    DEFAULT_TIMEZONE = "UTC"
+    user_tz = state.get("user_timezone") or DEFAULT_TIMEZONE
     
     user_payload = {
         "user_speech_transcript": text_to_analyze
@@ -75,7 +80,9 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     
     try:
       # Call your existing function using a smart, large context model
-      today_date = datetime.today().strftime('%Y-%m-%d')
+      #today_date = datetime.today().strftime('%Y-%m-%d')
+      today_date = datetime.now(ZoneInfo(user_tz)).strftime('%Y-%m-%d')
+
       client_time = state["client_time"]
       final_prompt = A2T_PROMPT.replace('{{CURRENT_DATE}}', client_time)
       analysis_result = call_groqJSON(
@@ -104,7 +111,11 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     #print("json_to_analyze=======\n", json_to_analyze);
     if not json_to_analyze or "Error during transcription" in json_to_analyze:
       return {"categorization_json": {"error": "No valid text to validate"}} 
-    
+
+
+    DEFAULT_TIMEZONE = "UTC"
+    user_tz = state.get("user_timezone") or DEFAULT_TIMEZONE
+
     user_payload = {
       "user_speech_transcript": text_to_analyze, 
       "extracted_json": json_to_analyze
@@ -112,7 +123,8 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     
     try:
       # Call your existing function using a smart, large context model
-      today_date = datetime.today().strftime('%Y-%m-%d')
+      #today_date = datetime.today().strftime('%Y-%m-%d')
+      today_date = datetime.now(ZoneInfo(user_tz)).strftime('%Y-%m-%d')
       client_time = state["client_time"]
       dt_obj = datetime.strptime(client_time, '%Y-%m-%d')
       day_of_week = dt_obj.strftime('%A')
