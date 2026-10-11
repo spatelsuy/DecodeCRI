@@ -27,6 +27,7 @@ Assume:
 - If no time is given for a day-long event, use 09:00 as a typical start time.
 - If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
 - If user has provided time, consider it.
+- If an activity is recurring, do not make multiple entries in "activities" section of JSON response. Make only a single entry and in "reasoning" add "it is a recurring activity" 
 
 AUDIT CHECKLIST:
 1. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}", which is today and it is "{{CURRENT_DAY_OF_WEEK}}". Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
