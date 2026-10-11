@@ -254,7 +254,7 @@ my_linguistic_response_schema = {
               "reasoning",
               "why_time_selected"
             ],
-            "additionalProperties": false,
+            "additionalProperties": False,
             "properties": {
               "activity": {
                 "type": "string",
