@@ -55,11 +55,12 @@ Your main tasks are:
 1. Ensure the set of activities provided in LINGUISTIC_BLUEPRINT are correct and complete with respect to its timestamp, the reasoning, assumption and why_time_selected. 
 2. Put the activities in 3 buckets (tasks, events and remainders as given in the JSON schema.
 
-Today's date is: "{{CURRENT_DATE}}"
-Date format: YYYY-MM-DD
-
+Assume:
+- “today” = "{{CURRENT_DATE}}" format IS YYYY-MM-DD
+- If no time is given for a day-long event, use 09:00 as a typical start time.
+- If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
+- If user has provided time, consider it. 
 """
-
 
 VALIDATION_PROMPT = """
 You are a data validation utility. 
@@ -67,17 +68,24 @@ Your job is to audit a structured JSON object against the raw text it was extrac
 
 Today's date is: "{{CURRENT_DATE}}"
 Day of the week: "{{CURRENT_DAY_OF_WEEK}}"
+Assume:
+- If no time is given for a day-long event, use 09:00 as a typical start time.
+- If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
+- If user has provided time, consider it. 
 
 INSTRUCTIONS FOR READING THE INPUT PAYLOAD:
 You will receive a JSON payload with two keys. Treat them as follows:
 1. "user_speech_transcript" -> This contains the raw spoken text from the user. Use this as your source of truth.
-2. "extracted_json" -> This contains the first-pass structural data that you need to audit, verify, and correct.
+2. "LINGUISTIC_BLUEPRINT" -> This contains the first-pass structural data that contain activities, its timestamp, the assumption, reasoning and why_time_selected.
+3. "extracted_json" -> This contains the set of activities (tasks, events and reminders) structural data that you need to audit, verify, and correct.
+
 
 AUDIT CHECKLIST:
-1. MISSING DATA: Compare "user_speech_transcript" to "extracted_json". Are there any tasks, events, or reminders present in the transcript that were left out of the JSON? If so, add them.
+1. MISSING DATA: Compare "user_speech_transcript" to activities in "LINGUISTIC_BLUEPRINT" to "extracted_json". Are there any tasks, events, or reminders present in the transcript that were left out of the JSON in "extracted_json"? If so, add them.
 2. INVALID COPIES: Look inside "extracted_json". Did the first pass create redundant duplicates (e.g., creating an entry under 'notes' for details already explained inside a task)? If so, clean them up.
 3. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}" and "{{CURRENT_DAY_OF_WEEK}}". Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
 4. SOURCE VERIFICATION: Check the "source_segment" field. Ensure the text snippet inside it actually exists word-for-word in the "user_speech_transcript". If you modify an item's date or time during this audit, ensure the "source_segment" still reflects the text that provided that context.
+5. Ensure the set of activities provided in LINGUISTIC_BLUEPRINT are correct and complete with respect to its timestamp, the reasoning, assumption and why_time_selected. If correct, adopt those.
 
 OUTPUT INSTRUCTIONS:
 Fix any errors found during the audit. 
@@ -85,7 +93,6 @@ CRITICAL: Return ONLY the raw schema object containing the keys "extracted_on", 
 Output ONLY the finalized, repaired, and structurally valid JSON object matching the original flat schema. 
 Do not include markdown formatting, backticks, or any conversational text.
 Enrich the "title" and "context" by making it complete senetence,  however do not assume. The sentence should be from the given raw text. 
-
 """
 
 def transcribe_audio_text(state: AudioProcessingState) -> Dict[str, Any]:
@@ -116,7 +123,8 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         tzinfo = ZoneInfo(DEFAULT_TIMEZONE)
         user_tz = DEFAULT_TIMEZONE    
 
-    client_time = state.get("client_time", datetime.now(tzinfo).strftime("%Y-%m-%d"))
+    now = datetime.now(tzinfo)
+    client_time = state.get("client_time", now.strftime("%Y-%m-%d"))
     text_to_analyze = state.get("transcription_text", "").strip()
     if not text_to_analyze or "Error during precheck" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
@@ -142,7 +150,7 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
     except Exception as e:
       print(f"preheck Node Error: {e}")
       precheck_result = {}
-    
+      
     print("--- PROMPT 1 (extracting activities) ---")
     user_payload = {
         "user_speech_transcript": text_to_analyze, 
@@ -159,42 +167,60 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
       )
       # This will be a standard Python dictionary containing the organized structure
       print("\n===============PROMPT 1 categorization_json============\n", analysis_result);
-      return {"categorization_json": analysis_result}
-        
+      return {
+         "categorization_json": analysis_result, 
+         "linguistic_blueprint": precheck_result, 
+      }
+     
     except Exception as e:
       print(f"Categorization Node Error: {e}")
-      return {"categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}}
+      return {
+         "categorization_json": {"error": f"Failed to organize schedule: {str(e)}"}, 
+         "linguistic_blueprint": precheck_result,
+      }
 
 
 def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
     print("--- PROMPT 2: Validate extraction-----")
+    DEFAULT_TIMEZONE = "UTC"
+    user_tz = state.get("user_timezone") or DEFAULT_TIMEZONE
+    try:
+        tzinfo = ZoneInfo(user_tz)
+    except ZoneInfoNotFoundError:
+        log.warning("Invalid timezone %s – falling back to %s", user_tz, DEFAULT_TIMEZONE)
+        tzinfo = ZoneInfo(DEFAULT_TIMEZONE)
+        user_tz = DEFAULT_TIMEZONE    
+
+    now = datetime.now(tzinfo)
+    client_time = state.get("client_time", now.strftime("%Y-%m-%d"))
+    day_of_week = now.strftime('%A')
     
     text_to_analyze = state.get("transcription_text", "")
     if not text_to_analyze or "Error during transcription" in text_to_analyze:
       return {"categorization_json": {"error": "No valid text to validate"}}
 
     json_to_analyze = state.get("categorization_json", "")
-    print("json_to_validate=======\n", json_to_analyze);
+    #print("json_to_validate=======\n", json_to_analyze);
     if not json_to_analyze or "Error during transcription" in json_to_analyze:
       return {"categorization_json": {"error": "No valid text to validate"}} 
-
-
-    DEFAULT_TIMEZONE = "UTC"
-    user_tz = state.get("user_timezone") or DEFAULT_TIMEZONE
-
+    
+    linguistic_blueprint = state.get("linguistic_blueprint", "")
     user_payload = {
       "user_speech_transcript": text_to_analyze, 
-      "extracted_json": json_to_analyze
+      "extracted_json": json_to_analyze, 
+      "LINGUISTIC_BLUEPRINT": linguistic_blueprint
     }
     
     try:
       # Call your existing function using a smart, large context model
-      today_date = datetime.now(ZoneInfo(user_tz)).strftime('%Y-%m-%d')
-      client_time = state["client_time"]
-      dt_obj = datetime.strptime(client_time, '%Y-%m-%d')
-      day_of_week = dt_obj.strftime('%A')
-      final_prompt = VALIDATION_PROMPT.replace('{{CURRENT_DATE}}', client_time)
-      final_prompt = final_prompt.replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
+      final_prompt = (
+         VALIDATION_PROMPT
+         .replace('{{CURRENT_DATE}}', client_time)
+         .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
+      )
+      print(final_prompt)
+      print("linguistic_blueprint =========")
+      print(linguistic_blueprint)
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
         user_payload=user_payload,
