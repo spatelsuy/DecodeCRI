@@ -680,7 +680,8 @@ def call_groqJSONPreCheck(system_prompt: str, user_payload: Dict[str, Any], mode
 
     user_prompt = json.dumps(user_payload, indent=2)
     print("\nMODEL === ", model, " | reasoning_effort =", reasoning_effort)
-
+    print(system_prompt)
+    print(user_prompt)
     payload = {
         "model": model,
         "messages": [
