@@ -177,8 +177,6 @@ my_strict_schema = {
 }
 
 my_linguistic_response_schema = {
-  "$schema": "http://json-schema.org/draft-2020-12/schema#",
-  "$id": "https://example.com/schedule_extraction_schema.json",
   "title": "Linguistic Blueprint – Schedule Extraction",
   "type": "object",
   "required": ["LINGUISTIC_BLUEPRINT"],
