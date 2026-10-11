@@ -396,8 +396,8 @@ def call_groq_transcribe(file_bytes: bytes, file_name: str = "recording.webm", m
     
     kept_text = []
     for seg in segments:
-        print("THE SEGMENT=")
-        print(json.dumps(seg, indent=2))
+        #print("THE SEGMENT=")
+        #print(json.dumps(seg, indent=2))
         no_speech_prob = seg.get("no_speech_prob", 0.0)
         avg_logprob = seg.get("avg_logprob", 0.0)
         temperature = seg.get("temperature", 0.0)
@@ -506,7 +506,7 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="opena
             failed_gen = err_obj.get("error", {}).get("failed_generation")
             if failed_gen:
                 salvaged = json.loads(failed_gen)
-                print("⚠️ Schema validation failed — salvaged from failed_generation instead of discarding.")
+                print("Schema validation failed — salvaged from failed_generation instead of discarding.")
                 return _repair(salvaged)
         except Exception as salvage_err:
             print("Salvage attempt also failed:", salvage_err)
@@ -542,7 +542,6 @@ def call_groqJSON(system_prompt: str, user_payload: Dict[str, Any], model="opena
     if not isinstance(parsed, dict):
         raise Exception("LLM did not return a valid JSON object map")
 
-    print("Returning repair one")
     return _repair(parsed)
 
 
@@ -662,5 +661,5 @@ def call_groqJSONPreCheck(system_prompt: str, user_payload: Dict[str, Any], mode
 
     if not isinstance(parsed, dict):
         raise Exception("PRECHECK - LLM did not return a valid JSON object map")
-    print("Precheck Returning repair one")
+
     return _repairPreCheck(parsed)
