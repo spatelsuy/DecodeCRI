@@ -4,7 +4,8 @@ from models import AudioProcessingState
 
 from agents.cri_agents import validate_input_agent
 from agents.cri_agents import get_ds_decode, get_ds_classify, get_ds_validate_classify, generate_code_classification, apply_hard_rules, guard_hard_rule_reversals
-from agents.a2t_agents import transcribe_audio_text, categorize_text, categorize_validation
+#from agents.a2t_agents import transcribe_audio_text, categorize_text, categorize_validation
+from agents.at2agents_simple import transcribe_audio_text, categorize_text, categorize_validation
 
 # ----------------------------
 # BUILD AGENT WORKFLOW
