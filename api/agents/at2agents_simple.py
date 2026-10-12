@@ -21,11 +21,14 @@ When only a range or no explicit time is given, pick a **reasonable midpoint** b
 **Any assumption should be context driven to .**  
 
 Assume:
-- today = "{{CURRENT_DATE}}" format IS YYYY-MM-DD
+- today = "{{CURRENT_DATE}}" format is YYYY-MM-DD
+- current_time = "{{CURRENT_TIME}}" in HH:mm:ss
+- current_date_and_time = "{{CURRENT_DATE_AND_TIME}}" format is YYYY-MM-DDTHH:mm:ss
 - DAY_OF_WEEK = "{{CURRENT_DAY_OF_WEEK}}"
 - time‑zone = "{{TIMEZONE}}"
 - If no time is given for a day-long event, use 09:00 as a typical start time.
-- If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
+- If user just says morning or noon or afternoon or evening or night without providing a time, consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
+- if user says "now", consider it as "{{CURRENT_DATE_AND_TIME}}", however ensure "now" is associated with an activity that can be either a task, event or reminder. 
 - If user has provided time, consider it.
 - If an activity is recurring, do not make multiple entries in "activities" section of JSON response. Make only a single entry and in "reasoning" add "it is a recurring activity" 
 - When set of activities are presented in sequence and a particular activity time is not mentioned explicitely, consider activity time of previous activity.   
@@ -61,11 +64,14 @@ Your main tasks are:
 2. Put the activities in 3 buckets (tasks, events and remainders as given in the JSON schema.
 
 Assume:
-- today: "{{CURRENT_DATE}}" format IS YYYY-MM-DD
-- Day of the week: "{{CURRENT_DAY_OF_WEEK}}"
-- time‑zone: "{{TIMEZONE}}"
+- today = "{{CURRENT_DATE}}" format is YYYY-MM-DD
+- current_time = "{{CURRENT_TIME}}" in HH:mm:ss
+- current_date_and_time = "{{CURRENT_DATE_AND_TIME}}" format is YYYY-MM-DDTHH:mm:ss
+- DAY_OF_WEEK = "{{CURRENT_DAY_OF_WEEK}}"
+- time‑zone = "{{TIMEZONE}}"
 - If no time is given for a day-long event, use 09:00 as a typical start time.
 - If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
+- if user says "now", consider it as "{{CURRENT_DATE_AND_TIME}}", however ensure "now" is associated with an activity that can be either a task, event or reminder. 
 - If user has provided time, consider it. 
 """
 
@@ -73,7 +79,9 @@ VALIDATION_PROMPT = """
 You are a data validation utility. 
 Your job is to audit a structured JSON object against the raw text it was extracted from and correct any mistakes.
 
-Today's date is: "{{CURRENT_DATE}}"
+Today's date is: "{{CURRENT_DATE}}" format is YYYY-MM-DD
+current_time = "{{CURRENT_TIME}}" in HH:mm:ss
+current_date_and_time = "{{CURRENT_DATE_AND_TIME}}" format is YYYY-MM-DDTHH:mm:ss
 Day of the week: "{{CURRENT_DAY_OF_WEEK}}"
 time‑zone: "{{TIMEZONE}}"
 
@@ -133,17 +141,22 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
         user_tz = DEFAULT_TIMEZONE    
 
     now = datetime.now(tzinfo)
-    client_time = state.get("client_time", now.strftime("%Y-%m-%d"))
+    client_date = state.get("client_time", now.strftime("%Y-%m-%d"))
+    client_time = now.strftime("%H:%M:%S")
+    client_date_and_time = now.strftime("%Y-%m-%dT%H:%M:%S")
     day_of_week = now.strftime('%A')
     
     text_to_analyze = state.get("transcription_text", "").strip()
     if not text_to_analyze or "Error during precheck" in text_to_analyze:
         return {"categorization_json": {"error": "No valid text to analyze"}}
 
+   
     user_payload_precheck = {"user_speech_transcript": text_to_analyze}
     final_prompt_precheck = (
         A2T_PRECHECK
-        .replace("{{CURRENT_DATE}}", client_time)
+        .replace("{{CURRENT_DATE}}", client_date)
+        .replace("{{CURRENT_TIME}}", client_time)
+        .replace("{{CURRENT_DATE_AND_TIME}}", client_date_and_time)
         .replace("{{TIMEZONE}}", user_tz)
         .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
     )    
@@ -173,9 +186,14 @@ def categorize_text(state: AudioProcessingState) -> Dict[str, Any]:
       # Call your existing function using a smart, large context model
       final_prompt = (
          A2T_PROMPT
-         .replace('{{CURRENT_DATE}}', client_time)
-         .replace("{{TIMEZONE}}", user_tz)
-         .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
+        .replace("{{CURRENT_DATE}}", client_date)
+        .replace("{{CURRENT_TIME}}", client_time)
+        .replace("{{CURRENT_DATE_AND_TIME}}", client_date_and_time)
+        .replace("{{TIMEZONE}}", user_tz)
+        .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
+
+
+         
       )
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
@@ -209,7 +227,9 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
         user_tz = DEFAULT_TIMEZONE    
 
     now = datetime.now(tzinfo)
-    client_time = state.get("client_time", now.strftime("%Y-%m-%d"))
+    client_date = state.get("client_time", now.strftime("%Y-%m-%d"))
+    client_time = now.strftime("%H:%M:%S")
+    client_date_and_time = now.strftime("%Y-%m-%dT%H:%M:%S")
     day_of_week = now.strftime('%A')
     
     text_to_analyze = state.get("transcription_text", "")
@@ -232,9 +252,11 @@ def categorize_validation(state: AudioProcessingState) -> Dict[str, Any]:
       # Call your existing function using a smart, large context model
       final_prompt = (
          VALIDATION_PROMPT
-         .replace('{{CURRENT_DATE}}', client_time)
-         .replace("{{TIMEZONE}}", user_tz)
-         .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
+        .replace("{{CURRENT_DATE}}", client_date)
+        .replace("{{CURRENT_TIME}}", client_time)
+        .replace("{{CURRENT_DATE_AND_TIME}}", client_date_and_time)
+        .replace("{{TIMEZONE}}", user_tz)
+        .replace('{{CURRENT_DAY_OF_WEEK}}', day_of_week)
       )
       analysis_result = call_groqJSON(
         system_prompt=final_prompt,
