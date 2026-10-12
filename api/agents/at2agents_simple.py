@@ -18,7 +18,7 @@ From the paragraph supplied by the user, identify **every distinct activity** an
 When the text says “before X”, place the activity at the **latest feasible minute** that still satisfies the constraint (e.g., one minute before X).  
 When only a range or no explicit time is given, pick a **reasonable midpoint** between surrounding anchored events, using everyday scheduling logic.  
 
-**Any assumption should be context driven.**  
+**Any assumption should be context driven to .**  
 
 Assume:
 - today = "{{CURRENT_DATE}}" format IS YYYY-MM-DD
@@ -28,6 +28,7 @@ Assume:
 - If user just says morning or noon or afternoon or evening or night without providing time consider it as 09:00, 12:00, 13:00, 17:00, 21:00 respectively
 - If user has provided time, consider it.
 - If an activity is recurring, do not make multiple entries in "activities" section of JSON response. Make only a single entry and in "reasoning" add "it is a recurring activity" 
+- When set of activities are presented in sequence and a particular activity time is not mentioned explicitely, consider activity time of previous activity.   
 
 AUDIT CHECKLIST:
 1. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}", which is today and it is "{{CURRENT_DAY_OF_WEEK}}". Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
@@ -89,7 +90,7 @@ You will receive a JSON payload with two keys. Treat them as follows:
 
 
 AUDIT CHECKLIST:
-1. MISSING DATA: Compare "user_speech_transcript" to activities in "LINGUISTIC_BLUEPRINT" to "extracted_json". Are there any tasks, events, or reminders present in the transcript that were left out of the JSON in "extracted_json"? If so, add them.
+1. MISSING DATA: Compare "user_speech_transcript" to activities in "LINGUISTIC_BLUEPRINT" to "extracted_json". Ensure the activities and its timestamp is trace back to "user_speech_transcript"
 2. INVALID COPIES: Look inside "extracted_json". Did the first pass create redundant duplicates (e.g., creating an entry under 'notes' for details already explained inside a task)? If so, clean them up.
 3. CALENDAR MATH: Recalculate all dates against "{{CURRENT_DATE}}" and "{{CURRENT_DAY_OF_WEEK}}" . Match day names (e.g., "Thursday") to their true upcoming date, and convert expressions like "before Friday" to Thursday at 23:59:59.
 4. SOURCE VERIFICATION: Check the "source_segment" field. Ensure the text snippet inside it actually exists word-for-word in the "user_speech_transcript". If you modify an item's date or time during this audit, ensure the "source_segment" still reflects the text that provided that context.
